@@ -2,12 +2,12 @@ var _ = require("underscore");
 var util = require("util");
 
 var grammar = [
-    "F",
+    "DEBUT",
     /^oo/,
-    or("Foo", "Bar"),
+    or("OR1", "OR2"),
     optional("Test"),
-    "plop",
-    multiple("bar"),
+
+    //multiple("bar"),
     ["subArray"],
     /^$/
 ];
@@ -29,75 +29,133 @@ function multiple(node) {
 
 // -----------
 
-function processGrammar(grammar, alreadyVisited) {
-    alreadyVisited = (alreadyVisited||[]);
 
-    if (grammar instanceof RegExp) {
-        return {
-            type: "regex",
-            value: grammar
-        };
+function processGrammar(grammar) {
+    var flatGrammar = [];
 
-    } else if (typeof grammar === "string") {
-        return {
-            type: "string",
-            value: grammar
-        };
-
-    } else if (Array.isArray(grammar) && grammar.length > 0) {
-        // On filtre les noeuds déjà visités
-        var nodes = _.difference(grammar, alreadyVisited);
-
-        var subNodes = _.map(nodes, function(node) {
-            return processGrammar(node, alreadyVisited);
+    function getDictItem(key) {
+        var r = _.find(flatGrammar, function (item) {
+            return (item[0] === key);
         });
 
-        // On connecte les sous-noeuds entre eux
-        for (var i = 0; i < subNodes.length - 1; i++) {
-            var leafs = getLeafs(subNodes[i]);
-            _.each(leafs, function (leaf) {
-                leaf.next = subNodes[i + 1];
-            });
-        }
-
-        return subNodes[0];
-
-    } else if (grammar.type === "or" && grammar.nodes) {
-        // On filtre les noeuds déjà visités
-        var nodes = _.difference(grammar.nodes, alreadyVisited);
-
-        return _.map(nodes, function(node) {
-            return processGrammar(node, alreadyVisited);
-        });
+        if (r) return r[1];
     }
 
-    console.log("Non géré :", grammar); // Non géré
-}
+    function setDictItem(key, value) {
+        flatGrammar.push([key, value]);
+    }
 
-function getLeafs(node, alreadyVisited) {
-    alreadyVisited = (alreadyVisited||[]);
+    function flattenGrammar(grammar) {
+        var item = getDictItem(grammar);
+        if (item !== undefined) return;
+        setDictItem(grammar, {});
 
-    // On définit la liste de noeuds sur laquelle on travaille.
-    var nodes;
-    if (Array.isArray(node)) nodes = node;
-    else if (node.next === undefined) return [node]; // C'est une feuille
-    else if (Array.isArray(node.next)) nodes = node.next;
-    else nodes = [nodes.next];
+        if (Array.isArray(grammar) && grammar.length > 0) {
+            _.each(grammar, flattenGrammar);
+        } else if (grammar.type && grammar.nodes) {
+            _.each(grammar.nodes, flattenGrammar);
+        }
+    }
 
-    // On filtre les noeuds déjà visités
-    nodes = _.difference(nodes, alreadyVisited);
+    // On applatit l'arbre cyclique de grammaire
+    flattenGrammar(grammar);
 
-    return _.flatten(_.map(nodes, function(node) {
-        alreadyVisited.push(node);
-        return getLeafs(node, alreadyVisited);
-    }));
+    // Puis on traite tous les noeuds séquentiellement.
+    _.each(flatGrammar, function (item) {
+        var grammar = item[0];
+        var node = item[1];
+
+        if (grammar instanceof RegExp) {
+            node.type = "regex";
+            node.value = grammar;
+            node.next = [];
+
+        } else if (typeof grammar === "string") {
+            node.type = "string";
+            node.value = grammar;
+            node.next = [];
+
+        } else if (Array.isArray(grammar)) {
+            node.type = "sequence";
+            node.value = _.map(grammar, function (item) {
+                return getDictItem(item);
+            });
+
+        } else if (grammar.type === "or" && grammar.nodes) {
+            node.type = "or";
+            node.value = _.map(grammar.nodes, function (item) {
+                return getDictItem(item);
+            });
+        }
+    });
+
+    // Puis on connecte les noeuds entre eux, en partant du noeud principal
+    var mainNode = getDictItem(grammar);
+
+    _.each(flatGrammar, function (item) {
+        var node = item[1];
+        if (node.type === "regex" || node.type === "string") {
+            node.connect = function (previous, next) {
+                _.each(previous, function (p) {
+                    p.connect([], [node]);
+                });
+                _.each(next, function (n) {
+                    if (_.contains(node.next, n)) return;
+                    node.next.push(n);
+                });
+
+                return node.getFirsts();
+            };
+            node.getFirsts = function() {
+                return [node];
+            };
+
+        } else if (node.type === "sequence") {
+            node.connect = function (previous, next) {
+                _.first(node.value).connect(previous, []);
+                for (var i = 0; i < node.value.length - 1; i++) {
+                    node.value[i].connect([], node.value[i + 1].getFirsts());
+                }
+                _.last(node.value).connect([], next);
+
+                return node.getFirsts();
+            };
+            node.getFirsts = function() {
+                return _.first(node.value).getFirsts();
+            };
+
+        } else if (node.type === "or") {
+            node.connect = function (previous, next) {
+                _.each(node.value, function (subNode) {
+                    subNode.connect(previous, next);
+                });
+                return node.getFirsts();
+            };
+            node.getFirsts = function() {
+                return _.flatten(_.map(node.value, function(subNode) {
+                    return subNode.getFirsts();
+                }));
+            };
+        }
+    });
+
+    var startNodes = mainNode.connect([], []);
+
+    // Nettoyage
+    _.each(flatGrammar, function (item) {
+        var node = item[1];
+        delete node.connect;
+        delete node.getFirsts;
+    });
+
+    // Puis on retourne les noeuds de départ
+    return startNodes;
 }
 
 console.log(util.inspect(grammar, {
     colors: true,
     depth: 10
 }));
-
 
 var processedGrammar = processGrammar(grammar);
 console.log(util.inspect(processedGrammar, {
