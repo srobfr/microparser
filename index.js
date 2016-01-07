@@ -1,20 +1,18 @@
 var _ = require("underscore");
 var util = require("util");
 
+// Construction de la syntaxe
 var infiniteSequence = ["Infinite sequence"];
 infiniteSequence.push(infiniteSequence);
 
 var grammar = [
     "DEBUT",
-    ///^oo/,
-    //or("OR1", "OR2"),
-    //optional("Test"),
-
-    multiple("(multiple)"),
-    or(/^plop/, infiniteSequence),
+    'foo',
+    'foo',
+    /^test/,
+    /^test/,
     "FIN"
 ];
-
 
 function or() {
     return {type: "or", nodes: _.toArray(arguments)};
@@ -49,7 +47,16 @@ function processGrammar(grammar) {
         flatGrammar.push([key, value]);
     }
 
+    function isScalar(value) {
+        return (/boolean|number|string/).test(typeof value);
+    }
+
     function flattenGrammar(grammar) {
+        // Si on a une valeure scalaire, on la transforme en objet car elle risque d'apparaître ailleurs dans la grammaire.
+        if(isScalar(grammar)) {
+            grammar = {scalar: grammar};
+        }
+
         var item = getDictItem(grammar);
         if (item !== undefined) return;
         setDictItem(grammar, {});
@@ -64,19 +71,19 @@ function processGrammar(grammar) {
     // On applatit l'arbre cyclique de grammaire
     flattenGrammar(grammar);
 
+    console.log(util.inspect(flatGrammar, {
+        colors: true,
+        depth: 10
+    }));
+
     // Puis on traite tous les noeuds séquentiellement.
     _.each(flatGrammar, function (item) {
         var grammar = item[0];
         var node = item[1];
 
-        if (grammar instanceof RegExp) {
-            node.type = "regex";
-            node.value = grammar;
-            node.next = [];
-
-        } else if (typeof grammar === "string") {
-            node.type = "string";
-            node.value = grammar;
+        if(grammar.scalar) {
+            node.type = (grammar.scalar instanceof RegExp ? "regex" : typeof grammar.scalar);
+            node.value = grammar.scalar;
             node.next = [];
 
         } else if (Array.isArray(grammar)) {
