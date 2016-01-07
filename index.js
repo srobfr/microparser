@@ -1,5 +1,4 @@
 var _ = require("underscore");
-var hashmap = require("hashmap");
 var util = require("util");
 
 var infiniteSequence = ["Infinite sequence"];
