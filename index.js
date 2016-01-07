@@ -1,16 +1,21 @@
 var _ = require("underscore");
+var hashmap = require("hashmap");
 var util = require("util");
+
+var infiniteSequence = ["Infinite sequence"];
+infiniteSequence.push(infiniteSequence);
 
 var grammar = [
     "DEBUT",
-    /^oo/,
-    or("OR1", "OR2"),
-    optional("Test"),
+    ///^oo/,
+    //or("OR1", "OR2"),
+    //optional("Test"),
 
-    //multiple("bar"),
-    ["subArray"],
-    /^$/
+    multiple("(multiple)"),
+    or(/^plop/, infiniteSequence),
+    "FIN"
 ];
+
 
 function or() {
     return {type: "or", nodes: _.toArray(arguments)};
@@ -90,19 +95,19 @@ function processGrammar(grammar) {
     });
 
     // Puis on connecte les noeuds entre eux, en partant du noeud principal
-    var mainNode = getDictItem(grammar);
-
     _.each(flatGrammar, function (item) {
         var node = item[1];
         if (node.type === "regex" || node.type === "string") {
-            node.connect = function (previous, next) {
-                _.each(previous, function (p) {
-                    p.connect([], [node]);
-                });
-                _.each(next, function (n) {
-                    if (_.contains(node.next, n)) return;
-                    node.next.push(n);
-                });
+            node.connect = function (previous, next, skip) {
+                if(!_.contains(skip, node)) {
+                    _.each(previous, function (p) {
+                        p.connect([], [node], skip);
+                    });
+                    _.each(next, function (n) {
+                        if (_.contains(node.next, n)) return;
+                        node.next.push(n);
+                    });
+                }
 
                 return node.getFirsts();
             };
@@ -111,12 +116,15 @@ function processGrammar(grammar) {
             };
 
         } else if (node.type === "sequence") {
-            node.connect = function (previous, next) {
-                _.first(node.value).connect(previous, []);
-                for (var i = 0; i < node.value.length - 1; i++) {
-                    node.value[i].connect([], node.value[i + 1].getFirsts());
+            node.connect = function (previous, next, skip) {
+                if(!_.contains(skip, node)) {
+                    skip = skip.concat(node);
+                    _.first(node.value).connect(previous, [], skip);
+                    for (var i = 0; i < node.value.length - 1; i++) {
+                        node.value[i].connect([], node.value[i + 1].getFirsts(), skip);
+                    }
+                    _.last(node.value).connect([], next, skip);
                 }
-                _.last(node.value).connect([], next);
 
                 return node.getFirsts();
             };
@@ -125,10 +133,13 @@ function processGrammar(grammar) {
             };
 
         } else if (node.type === "or") {
-            node.connect = function (previous, next) {
-                _.each(node.value, function (subNode) {
-                    subNode.connect(previous, next);
-                });
+            node.connect = function (previous, next, skip) {
+                if(!_.contains(skip, node)) {
+                    skip = skip.concat(node);
+                    _.each(node.value, function (subNode) {
+                        subNode.connect(previous, next, [node], skip);
+                    });
+                }
                 return node.getFirsts();
             };
             node.getFirsts = function() {
@@ -139,7 +150,8 @@ function processGrammar(grammar) {
         }
     });
 
-    var startNodes = mainNode.connect([], []);
+    var mainNode = getDictItem(grammar);
+    var startNodes = mainNode.connect([], [], []);
 
     // Nettoyage
     _.each(flatGrammar, function (item) {
