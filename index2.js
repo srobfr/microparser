@@ -1,28 +1,6 @@
 var _ = require("underscore");
 var util = require("util");
 
-// Construction de la syntaxe
-var infiniteSequence = ["Infinite sequence"];
-infiniteSequence.push(infiniteSequence);
-
-var grammar = [
-    "DEBUT",
-    /^foo/,
-    /^foo/,
-    {type: "or", value: ["foo", "bar"]},
-    {type: "qsdfqsdf", value: ["meh"]},
-    infiniteSequence,
-    ["1", /^2/],
-    "FIN"
-];
-
-// -----------
-
-console.log(util.inspect(grammar, {
-    colors: true,
-    depth: 10
-}));
-
 /**
  * Implémentation d'une Map
  * @constructor
@@ -30,12 +8,14 @@ console.log(util.inspect(grammar, {
 function Map() {
     var that = this;
     that.store = [];
-    that.get = function (key) {
-        return _.find(that.store, function (item) {
+    that.get = function(key) {
+        var r = _.find(that.store, function(item) {
             return (item[0] === key);
         });
+
+        return r ? r[1] : undefined;
     };
-    that.set = function (key, value) {
+    that.set = function(key, value) {
         that.store.push([key, value]);
     };
     that.each = function(func) {
@@ -47,69 +27,205 @@ function Map() {
 
 function processGrammar(grammar) {
     // On transforme la grammaire en arbre traversable récursivement et sans valeur scalaire.
-    var alreadySeenNodesMap = new Map();
-    var references = [];
-    function convertGrammarToWalkableGrammar(grammar) {
-        if((/boolean|number|string/).test(typeof grammar)) {
+    var alreadySeenGrammarNodesMap = new Map();
+    var id = 0;
+
+    function expandGrammar(grammar) {
+        if ((/boolean|number|string/).test(typeof grammar)) {
             var node = {
                 type: typeof grammar,
                 value: grammar,
-                getLast: function() {return node;},
-                getFirst: function() {return node;}
+                id: id++
             };
+
+            node.first = function() { return [node]; };
+            node.last = function() { return [node]; };
+
             return node;
 
-        } else if(grammar instanceof RegExp) {
+        } else if (grammar instanceof RegExp) {
             var node = {
                 type: "regex",
                 value: grammar,
-                getLast: function() {return node;},
-                getFirst: function() {return node;}
+                id: id++
             };
+
+            node.first = function() { return [node]; };
+            node.last = function() { return [node]; };
+
             return node;
 
         } else {
-            var r = alreadySeenNodesMap.get(grammar);
-            if(r) {
-                // C'est une référence.
-                references.push(r);
-                var node = {
-                    type: "reference",
-                    value: references.length - 1
-                };
-                return node;
-            }
+            var node = alreadySeenGrammarNodesMap.get(grammar);
+            if (node) return node;
 
-            if(Array.isArray(grammar)) {
-                r = {type: "sequence"};
-                alreadySeenNodesMap.set(grammar, r);
-                r.value = _.map(grammar, convertGrammarToWalkableGrammar);
-                r.getLast = function() {return _.last(r.value).getLast();};
-                r.getFirst = function() {return _.first(r.value).getFirst();};
+            if (Array.isArray(grammar)) {
+                node = {type: "sequence"};
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = [];
+                _.each(grammar, function(g) {
+                    node.value.push(expandGrammar(g));
+                });
+                node.id = id++;
+
+                node.first = function() {
+                    return _.first(node.value).first();
+                };
+                node.last = function() {
+                    return _.last(node.value).last();
+                };
 
             } else if (grammar.type && grammar.value) {
-                r = {type: grammar.type};
-                alreadySeenNodesMap.set(grammar, r);
-                r.value = _.map(grammar.value, convertGrammarToWalkableGrammar);
-                r.getLast = function() {return _.map(r.value, function(node) {return node.getLast();});};
-                r.getFirst = function() {return _.map(r.value, function(node) {return node.getLast();});};
+                node = {type: grammar.type};
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = _.map(grammar.value, expandGrammar);
+                node.id = id++;
+
+                node.first = function() {
+                    var r = [];
+                    _.each(node.value, function(node) {
+                        r = r.concat(node.first());
+                    });
+                    return r;
+                };
+                node.last = function() {
+                    var r = [];
+                    _.each(node.value, function(node) {
+                        r = r.concat(node.last());
+                    });
+                    return r;
+                };
             }
 
-            return r;
+            return node;
         }
     }
 
-    var walkableGrammar = convertGrammarToWalkableGrammar(grammar);
 
-    console.log(util.inspect(walkableGrammar.getLast(), {
+    var expandedGrammar = expandGrammar(grammar);
+
+    console.log("expandedGrammar=", util.inspect(expandedGrammar, {
         colors: true,
         depth: 10
     }));
 
+    // A partir de la grammaire étendue, on va générer un graphe connecté des possiblités de noeuds suivant un noeud donné.
+    _.each(alreadySeenGrammarNodesMap.store, function(item) {
+        var grammar = item[1];
+        if (grammar.type === "sequence") {
+            grammar.first = function() {
+                return _.first(grammar.value).first();
+            };
+            grammar.last = function() {
+                return grammar.value[0].last();
+            };
+        } else if (grammar.type === "or") {
+            grammar.first = function() {
+                var r = [];
+                _.each(grammar.value, function(node) {
+                    r = r.concat(node.first());
+                });
+                return r;
+            };
+            grammar.last = function() {
+                var r = [];
+                _.each(grammar.value, function(node) {
+                    r = r.concat(node.last());
+                });
+                return r;
+            };
+        } else {
+            grammar.first = function() {
+                return [grammar];
+            };
+            grammar.last = function() {
+                return [grammar];
+            };
+        }
+    });
+
+    function connect(befores, node, afters) {
+        var relations = [];
+
+        if (node.type === "sequence") {
+            // Entrée
+            var firstsOfFirst = _.first(node.value).first();
+            _.each(befores, function(b) {
+                _.each(firstsOfFirst, function(f) {
+                    relations.push([b, f]);
+                });
+            });
+
+            // Interne
+            for(var i = 0; i < (node.value.length - 1); i++) {
+                var node1Last = node.value[i].last();
+                var node2First = node.value[i+1].first();
+                _.each(node1Last, function(n1) {
+                    _.each(node2First, function(n2) {
+                        relations.push([n1, n2]);
+                    });
+                });
+            }
+
+            // Sortie
+            var lastsOfLast = _.last(node.value).last();
+            _.each(afters, function(a) {
+                _.each(lastsOfLast, function(l) {
+                    relations.push([l, a]);
+                });
+            });
+
+        } else if (node.type === "or") {
+            _.each(node.value, function(node) {
+                relations = relations.concat(connect(befores, node, afters));
+            });
+
+        } else {
+            _.each(befores, function(b) {
+                relations.push([b, node]);
+            });
+            _.each(afters, function(a) {
+                relations.push([node, a]);
+            });
+        }
+
+        return relations;
+    }
+
+    // Start est le noeud d'entrée.
+    var start = {
+        type: "start",
+        last: function() { return [start]; }
+    };
+
+    var relations = connect([start], expandedGrammar, []);
+
+    // On nettoie les noeuds
+    //_.each(relations, function(item) {
+    //    delete(item[1].first);
+    //    delete(item[1].last);
+    //});
+
+    console.log("relations=", util.inspect(relations, {
+        colors: true,
+        depth: 10
+    }));
 }
 
-var processedGrammar = processGrammar(grammar);
-console.log(util.inspect(processedGrammar, {
+// ---
+var infiniteSequence = ["Infinite sequence"];
+infiniteSequence.push(infiniteSequence);
+
+var foo = ["B"];
+var aOrB = { type: "or", value: [ foo, "A" ]};
+foo.push(aOrB);
+var grammar = ["AAA", aOrB, "CCC", [/^DDD/]];
+
+// -----------
+
+console.log("grammar=", util.inspect(grammar, {
     colors: true,
     depth: 10
 }));
+
+processGrammar(grammar);
