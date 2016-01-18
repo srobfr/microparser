@@ -29,27 +29,24 @@ function processGrammar(grammar) {
     // On transforme la grammaire en arbre traversable récursivement et sans valeur scalaire.
     var alreadySeenGrammarNodesMap = new Map();
 
+    var id = 0;
     function expandGrammar(grammar) {
         if ((/boolean|number|string/).test(typeof grammar)) {
-            var node = {
-                type: typeof grammar,
-                value: grammar
-            };
-
+            var node = {};
+            node.type = typeof grammar;
+            node.value = grammar;
             node.first = function() { return [node]; };
             node.last = function() { return [node]; };
-
+            node.id = id++;
             return node;
 
         } else if (grammar instanceof RegExp) {
-            var node = {
-                type: "regex",
-                value: grammar
-            };
-
+            var node = {};
+            node.type = "regex";
+            node.value = grammar;
             node.first = function() { return [node]; };
             node.last = function() { return [node]; };
-
+            node.id = id++;
             return node;
 
         } else {
@@ -70,6 +67,7 @@ function processGrammar(grammar) {
                 node.last = function() {
                     return _.last(node.value).last();
                 };
+                node.id = id++;
 
             } else if (grammar.type && grammar.value) {
                 node = {type: grammar.type};
@@ -90,6 +88,7 @@ function processGrammar(grammar) {
                     });
                     return r;
                 };
+                node.id = id++;
             }
 
             return node;
@@ -172,7 +171,7 @@ function processGrammar(grammar) {
 
         } else if (node.type === "or") {
             _.each(node.value, function(node) {
-                relations = relations.concat(connect(befores, node, afters));
+                relations.push(connect(befores, node, afters));
             });
 
         } else {
@@ -194,14 +193,14 @@ function processGrammar(grammar) {
     };
 
     var relations = connect([start], expandedGrammar, []);
-
-    // On nettoie les noeuds
-    _.each(relations, function(item) {
-        delete(item[1].first);
-        delete(item[1].last);
-    });
-
-    // TODO On reconstruit un arbre d'enchaînements possibles des noeuds.
+    //
+    //// On nettoie les noeuds
+    //_.each(relations, function(item) {
+    //    delete(item[1].first);
+    //    delete(item[1].last);
+    //});
+    //
+    //// TODO On reconstruit un arbre d'enchaînements possibles des noeuds.
 
     console.log("relations=", util.inspect(relations, {
         colors: true,
@@ -217,7 +216,7 @@ var optionnalSpace = {type: "or", value: [space, ""]};
 
 var sqlQuery = [
     select, optionnalSpace,
-    "test"
+    "test", optionnalSpace
 ];
 
 grammar = sqlQuery;
