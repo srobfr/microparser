@@ -28,14 +28,12 @@ function Map() {
 function processGrammar(grammar) {
     // On transforme la grammaire en arbre traversable récursivement et sans valeur scalaire.
     var alreadySeenGrammarNodesMap = new Map();
-    var id = 0;
 
     function expandGrammar(grammar) {
         if ((/boolean|number|string/).test(typeof grammar)) {
             var node = {
                 type: typeof grammar,
-                value: grammar,
-                id: id++
+                value: grammar
             };
 
             node.first = function() { return [node]; };
@@ -46,8 +44,7 @@ function processGrammar(grammar) {
         } else if (grammar instanceof RegExp) {
             var node = {
                 type: "regex",
-                value: grammar,
-                id: id++
+                value: grammar
             };
 
             node.first = function() { return [node]; };
@@ -66,7 +63,6 @@ function processGrammar(grammar) {
                 _.each(grammar, function(g) {
                     node.value.push(expandGrammar(g));
                 });
-                node.id = id++;
 
                 node.first = function() {
                     return _.first(node.value).first();
@@ -79,8 +75,7 @@ function processGrammar(grammar) {
                 node = {type: grammar.type};
                 alreadySeenGrammarNodesMap.set(grammar, node);
                 node.value = _.map(grammar.value, expandGrammar);
-                node.id = id++;
-
+                
                 node.first = function() {
                     var r = [];
                     _.each(node.value, function(node) {
@@ -201,10 +196,10 @@ function processGrammar(grammar) {
     var relations = connect([start], expandedGrammar, []);
 
     // On nettoie les noeuds
-    //_.each(relations, function(item) {
-    //    delete(item[1].first);
-    //    delete(item[1].last);
-    //});
+    _.each(relations, function(item) {
+        delete(item[1].first);
+        delete(item[1].last);
+    });
 
     console.log("relations=", util.inspect(relations, {
         colors: true,
