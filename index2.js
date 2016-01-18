@@ -75,7 +75,7 @@ function processGrammar(grammar) {
                 node = {type: grammar.type};
                 alreadySeenGrammarNodesMap.set(grammar, node);
                 node.value = _.map(grammar.value, expandGrammar);
-                
+
                 node.first = function() {
                     var r = [];
                     _.each(node.value, function(node) {
@@ -201,6 +201,8 @@ function processGrammar(grammar) {
         delete(item[1].last);
     });
 
+    // TODO On reconstruit un arbre d'enchaînements possibles des noeuds.
+
     console.log("relations=", util.inspect(relations, {
         colors: true,
         depth: 10
@@ -208,13 +210,17 @@ function processGrammar(grammar) {
 }
 
 // ---
-var infiniteSequence = ["Infinite sequence"];
-infiniteSequence.push(infiniteSequence);
 
-var foo = ["B"];
-var aOrB = { type: "or", value: [ foo, "A" ]};
-foo.push(aOrB);
-var grammar = ["AAA", aOrB, "CCC", [/^DDD/]];
+var select = /^select/i;
+var space = /^[\s\t\r\n]+/;
+var optionnalSpace = {type: "or", value: [space, ""]};
+
+var sqlQuery = [
+    select, optionnalSpace,
+    "test"
+];
+
+grammar = sqlQuery;
 
 // -----------
 
