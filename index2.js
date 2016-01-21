@@ -138,52 +138,75 @@ function processGrammar(grammar) {
         }
     });
 
-    function connect(befores, node, afters) {
-        var relations = [];
+    function connect(befores, grammar, afters, knownNodesForGrammar) {
+        function getOrCreateNode(grammar) {
+            return {
+                grammar: grammar,
+                next: []
+            };
 
-        if (node.type === "sequence") {
+            var node = knownNodesForGrammar.get(grammar);
+            if(!node) {
+                node = {
+                    grammar: grammar,
+                    next: []
+                };
+
+                knownNodesForGrammar.set(grammar, node);
+            }
+
+            return node;
+        }
+
+        if (grammar.type === "sequence") {
             // Entrée
-            var firstsOfFirst = _.first(node.value).first();
-            _.each(befores, function(b) {
-                _.each(firstsOfFirst, function(f) {
-                    relations.push([b, f]);
+            var firstsOfFirstGrammar = _.first(grammar.value).first();
+            _.each(firstsOfFirstGrammar, function(f) {
+                var node = getOrCreateNode(f);
+                _.each(befores, function(b) {
+                    b.next.push(node);
                 });
             });
 
             // Interne
-            for(var i = 0; i < (node.value.length - 1); i++) {
-                var node1Last = node.value[i].last();
-                var node2First = node.value[i+1].first();
-                _.each(node1Last, function(n1) {
-                    _.each(node2First, function(n2) {
-                        relations.push([n1, n2]);
+            for(var i = 0; i < (grammar.value.length - 1); i++) {
+                var leftGrammarLasts = grammar.value[i].last();
+                var rightGrammarFirsts = grammar.value[i+1].first();
+                _.each(leftGrammarLasts, function(leftGrammar) {
+                    _.each(rightGrammarFirsts, function(rightGrammar) {
+                        // On connecte left à right.
+                        var leftNode = getOrCreateNode(leftGrammar);
+                        var rightNode = getOrCreateNode(rightGrammar);
+                        leftNode.next.push(rightNode);
                     });
                 });
             }
 
             // Sortie
-            var lastsOfLast = _.last(node.value).last();
+            var lastsOfLastGrammar = _.last(grammar.value).last();
             _.each(afters, function(a) {
-                _.each(lastsOfLast, function(l) {
-                    relations.push([l, a]);
+                _.each(lastsOfLastGrammar, function(l) {
+                    var node = getOrCreateNode(l);
+                    _.each(afters, function(a) {
+                        node.next.push(a);
+                    });
                 });
             });
 
-        } else if (node.type === "or") {
-            _.each(node.value, function(node) {
-                relations.push(connect(befores, node, afters));
+        } else if (grammar.type === "or") {
+            _.each(grammar.value, function(subGrammar) {
+                connect(befores, subGrammar, afters, new Map());
             });
 
         } else {
-            _.each(befores, function(b) {
-                relations.push([b, node]);
-            });
+            var node = getOrCreateNode(grammar);
             _.each(afters, function(a) {
-                relations.push([node, a]);
+                node.next.push(a);
+            });
+            _.each(befores, function(b) {
+                b.next.push(node);
             });
         }
-
-        return relations;
     }
 
     // Start est le noeud d'entrée.
@@ -192,7 +215,15 @@ function processGrammar(grammar) {
         last: function() { return [start]; }
     };
 
-    var relations = connect([start], expandedGrammar, []);
+    var node = {
+        grammar: start,
+        next: []
+    };
+
+    var knownNodesForGrammar = new Map();
+    knownNodesForGrammar.set(start, node);
+    connect([node], expandedGrammar, [], knownNodesForGrammar);
+
     //
     //// On nettoie les noeuds
     //_.each(relations, function(item) {
@@ -202,10 +233,12 @@ function processGrammar(grammar) {
     //
     //// TODO On reconstruit un arbre d'enchaînements possibles des noeuds.
 
-    console.log("relations=", util.inspect(relations, {
-        colors: true,
-        depth: 10
-    }));
+    //console.log("node=", util.inspect(node, {
+    //    colors: true,
+    //    depth: 10
+    //}));
+
+    return node;
 }
 
 // ---
@@ -219,7 +252,9 @@ var sqlQuery = [
     "test", optionnalSpace
 ];
 
-grammar = sqlQuery;
+var grammar = sqlQuery;
+var baz = ["BAZ"];
+grammar = ["FOO", "BAR", baz, "blah", baz];
 
 // -----------
 
@@ -228,4 +263,22 @@ console.log("grammar=", util.inspect(grammar, {
     depth: 10
 }));
 
-processGrammar(grammar);
+var result = processGrammar(grammar);
+console.log("result=", util.inspect(result, {
+    colors: true,
+    depth: 10
+}));
+
+// Affichage du déroulement
+function dumpResult(next, indent) {
+    if(indent.length > 30) return;
+    _.each(next, function(node) {
+        console.log(indent, indent.length, util.inspect(node.grammar.value, {
+            colors: true,
+            depth: 10
+        }));
+        dumpResult(node.next, indent + "  ");
+    });
+}
+
+dumpResult(result.next, "");
