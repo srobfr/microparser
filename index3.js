@@ -194,7 +194,7 @@ function or() {
 }
 
 function optional(node) {
-    return {type: "or", value: [node, ""]};
+    return or(node, "");
 }
 
 function multiple(node) {
@@ -207,7 +207,11 @@ function multiple(node) {
 
 // Affichage du déroulement
 function dumpResult(next, indent) {
-    if(indent.length > 30) return;
+    if(indent.length > 50) {
+        console.log(indent, "***!! Loop !!***");
+        return;
+    }
+
     _.each(next, function(node) {
         console.log(indent, indent.length, util.inspect(node.grammar.value, {
             colors: true,
@@ -218,27 +222,14 @@ function dumpResult(next, indent) {
 }
 
 // ---
-var select = /^select/i;
-var space = /^[\s\t\r\n]+/;
-var optionnalSpace = {type: "or", value: [space, ""]};
-
-var sqlQuery = [
-    select, optionnalSpace,
-    "*", optionnalSpace,
-    "from", optionnalSpace,
-    /^[a-z]+/i, space
-];
-
+var b = ["B"];
+b.push("A", b, "C");
 var grammar = [
-    sqlQuery,
-    multiple([
-        ";",
-        sqlQuery
-    ])
+    b
 ];
 
 // -----------
-
+//console.log = function() {};
 console.log("grammar=", util.inspect(grammar, {
     colors: true,
     depth: 10
@@ -250,4 +241,4 @@ var result = processGrammar(grammar);
 //    depth: 99
 //}));
 console.log("====");
-//dumpResult(result.nexts, "");
+dumpResult(result.nexts, "");
