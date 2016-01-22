@@ -2,57 +2,10 @@ var _ = require("lodash");
 var util = require("util");
 var Map = require(__dirname + "/Map.js");
 
-var GrammarProcessor = {};
+var grammarChainer = {};
+module.exports = grammarChainer;
 
-GrammarProcessor.expandGrammar = function(grammar) {
-    var alreadySeenGrammarNodesMap = new Map();
-
-    function _expand(grammar) {
-        if ((/boolean|number|string/).test(typeof grammar)) {
-            var node = {};
-            node.type = typeof grammar;
-            node.value = grammar;
-            return node;
-
-        } else if (grammar instanceof RegExp) {
-            var node = {};
-            node.type = "regex";
-            node.value = grammar;
-            return node;
-
-        } else {
-            var node = alreadySeenGrammarNodesMap.get(grammar);
-            if (node) return node;
-
-            if (Array.isArray(grammar)) {
-                node = {type: "sequence"};
-                alreadySeenGrammarNodesMap.set(grammar, node);
-                node.value = [];
-                _.each(grammar, function(g) {
-                    node.value.push(_expand(g));
-                });
-
-            } else if (grammar.type === "or" && grammar.value) {
-                node = {type: grammar.type};
-                alreadySeenGrammarNodesMap.set(grammar, node);
-                node.value = _.map(grammar.value, _expand);
-
-            } else if (grammar.type && grammar.value) {
-                node = grammar;
-                alreadySeenGrammarNodesMap.set(grammar, node);
-
-            } else {
-                throw new Error("Unrecognized grammar format : " + util.inspect(grammar));
-            }
-
-            return node;
-        }
-    }
-
-    return _expand(grammar);
-};
-
-GrammarProcessor.computeNodesChaining = function(grammar) {
+grammarChainer.chain = function(grammar) {
     function _walk(grammar, antiLoopMap) {
         if (grammar.type === "sequence") {
             var node = antiLoopMap.get(grammar);
@@ -73,17 +26,22 @@ GrammarProcessor.computeNodesChaining = function(grammar) {
             antiLoopMap.set(grammar, node);
 
             var currentNodes = [node];
-            _.each(grammar.value, function(subGrammar) {
+
+            for(var i in grammar.value) {
+                var subGrammar = grammar.value[i];
                 var subNode = _walk(subGrammar, antiLoopMap);
                 node.firsts = node.firsts || subNode.firsts;
                 node.lasts = subNode.lasts;
+
                 _.each(currentNodes, function(currentNode) {
+                    if(currentNode.nexts.length > 0) return;
                     currentNode.nexts = currentNode.nexts.concat(subNode.firsts);
                 });
-                currentNodes = subNode.lasts;
-            });
-            node.lasts = currentNodes;
 
+                currentNodes = subNode.lasts;
+            }
+
+            node.lasts = currentNodes;
             return node;
 
         } else if (grammar.type === "or") {
@@ -127,6 +85,7 @@ GrammarProcessor.computeNodesChaining = function(grammar) {
     }
 
     var chainedNode = _walk(grammar, new Map());
+    var firsts = chainedNode.firsts;
 
     // Ensuite on parcours récursivement les noeuds pour supprimer les champs de travail ("firsts" & "lasts")
     function _clean(node) {
@@ -138,12 +97,5 @@ GrammarProcessor.computeNodesChaining = function(grammar) {
 
     _clean(chainedNode);
 
-    return chainedNode;
+    return firsts;
 };
-
-GrammarProcessor.process = function(grammar) {
-    var expandedGrammar = GrammarProcessor.expandGrammar(grammar);
-    return GrammarProcessor.computeNodesChaining(expandedGrammar);
-};
-
-module.exports = GrammarProcessor;
