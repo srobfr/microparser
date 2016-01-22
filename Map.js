@@ -1,4 +1,4 @@
-var _ = require("underscore");
+var _ = require("lodash");
 
 /**
  * Implémentation d'une Map
@@ -6,7 +6,9 @@ var _ = require("underscore");
  */
 function Map() {
     var that = this;
+
     that.store = [];
+
     that.get = function(key) {
         var r = _.find(that.store, function(item) {
             return (item[0] === key);
@@ -14,9 +16,11 @@ function Map() {
 
         return r ? r[1] : undefined;
     };
+
     that.set = function(key, value) {
         that.store.push([key, value]);
     };
+
     that.each = function(func) {
         _.each(that.store, function(v, k) {
             func(v, k);

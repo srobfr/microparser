@@ -1,25 +1,11 @@
-var _ = require("underscore");
+var _ = require("lodash");
 var util = require("util");
-
-function or() {
-    return {type: "or", value: _.toArray(arguments)};
-}
-
-function optional(node) {
-    return or(node, "");
-}
-
-function multiple(node) {
-    var s = [node];
-    var o = optional(s);
-    s.push(o); // Référence croisée.
-    return s;
-}
-
+var grammarProcessor = require(__dirname + "/GrammarProcessor.js");
+var gu = require(__dirname + "/GrammarUtils.js");
 
 // Affichage du déroulement
 function dumpResult(next, indent) {
-    if(indent.length > 50) {
+    if (indent.length > 50) {
         console.log(indent, "***!! Loop !!***");
         return;
     }
@@ -34,11 +20,10 @@ function dumpResult(next, indent) {
 }
 
 // ---
-var b = ["B"];
-b.push("A", b, "C");
-var grammar = [
-    b
-];
+
+var i = ["i"];
+i.push(i);
+var grammar = ["plop", i, "fin"];
 
 // -----------
 //console.log = function() {};
@@ -47,10 +32,10 @@ console.log("grammar=", util.inspect(grammar, {
     depth: 10
 }));
 
-var result = processGrammar(grammar);
-//console.log("result=", util.inspect(result, {
-//    colors: true,
-//    depth: 99
-//}));
+var result = grammarProcessor.process(grammar);
+console.log("result=", util.inspect(result, {
+    colors: true,
+    depth: 99
+}));
 console.log("====");
-dumpResult(result.nexts, "");
+//dumpResult(result.nexts, "");
