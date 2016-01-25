@@ -20,8 +20,8 @@ function _expandString(grammar) {
     };
 
     // Fonction de résultat par défaut
-    node.result = function(match) {
-        return [match.code];
+    node.result = function(result, match) {
+        return [result, match.code];
     };
 
     return node;
@@ -39,35 +39,13 @@ function _expandRegex(grammar) {
         r.match = (m !== null);
         r.code = (r.match ? m[0] : "");
         r.length = (r.match ? m[0].length : 0);
+        r.groups = m;
         return r;
     };
 
     // Fonction de résultat par défaut
-    node.result = function(match) {
-        return [match.code];
-    };
-
-    return node;
-}
-
-function _expandArray(grammar) {
-    var node = {};
-    node.type = "regex";
-    node.value = grammar;
-
-    // Fonction de match par défaut
-    node.match = function(context) {
-        var m = context.code.substr(context.offset).match(node.value);
-        var r = {};
-        r.match = (m !== null);
-        r.code = (r.match ? m[0] : "");
-        r.length = (r.match ? m[0].length : 0);
-        return r;
-    };
-
-    // Fonction de résultat par défaut
-    node.result = function(match) {
-        return [match.code];
+    node.result = function(result, match) {
+        return [result, match.code];
     };
 
     return node;

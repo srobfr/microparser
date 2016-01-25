@@ -1,13 +1,17 @@
-
+var _ = require("lodash");
+var util = require("util");
+var grammarChainer = require(__dirname + "/grammarChainer.js");
 
 /**
  * Parser
  *
- * @param chainedGrammar
+ * @param grammar
  * @constructor
  */
-function Parser(chainedGrammar) {
+function Parser(grammar) {
     var that = this;
+
+    var chainedGrammar = grammarChainer.chain(grammar);
 
     that.parse = function(code) {
         var context = {
@@ -15,37 +19,54 @@ function Parser(chainedGrammar) {
             offset: 0
         };
 
-        var result = parse(context, chainedGrammar);
-        return result;
+        // Parsing (1ère passe)
+        var parsingResult = parseTree(context, chainedGrammar);
+
+        // Evaluation (2ème passe)
+        var evalResult = [];
+        var m = parsingResult;
+        do {
+            evalResult = m.grammar.result(evalResult, m);
+            m = m.next;
+        } while(m);
+        return evalResult;
     };
 
-    function parse(context, chainedGrammarNodes) {
+    function parseTree(context, chainedGrammarNodes) {
         for(var i in chainedGrammarNodes) {
             var chainedGrammarNode = chainedGrammarNodes[i];
-            var m = tryToMatch(context, chainedGrammarNode);
-            console.log(m);
+            var m = parseNode(context, chainedGrammarNode);
             if(m.match) {
-                var nexts = chainedGrammarNode.nexts;
-                if(nexts.length > 0) {
-                    return parse(m.nextContext, nexts);
-                } else {
-                    return m;
-                }
+                return m;
             }
         }
 
-        // TODO Stocker les matches KO pour affichage de l'erreur de syntaxe.
-        return null;
+        // Erreur de syntaxe.
+        var message = "Syntax error !\nExpected : " + _.map(chainedGrammarNodes, function(node) {
+                return util.inspect(node.grammar.value, {colors: true});
+            }).join(", ") + "\nGot : " + context.code.substr(context.offset, 50);
+
+        throw new Error(message);
     }
 
-    function tryToMatch(context, chainedGrammarNode) {
+    function parseNode(context, chainedGrammarNode) {
         var grammar = chainedGrammarNode.grammar;
-        if(grammar.type === "string") {
-            return parseString(context, grammar.value);
+        var m = grammar.match(context);
+        m.grammar = grammar;
+        if(m.match) {
+            var nextContext = {
+                code: context.code,
+                offset: context.offset + m.length
+            };
 
-        } else if(grammar.type === "regex") {
-            return parseRegex(context, grammar.value);
+            var nexts = chainedGrammarNode.nexts;
+            if(nexts.length > 0) {
+                var treeM = parseTree(nextContext, nexts);
+                m.next = treeM;
+            }
         }
+
+        return m;
     }
 }
 
