@@ -33,7 +33,7 @@ function Parser(grammar) {
     };
 
     function parseTree(context, chainedGrammarNodes) {
-        console.log(util.inspect(chainedGrammarNodes, {depth: 20, colors: true}));
+        //console.log(util.inspect(chainedGrammarNodes, {depth: 20, colors: true}));
 
         for(var i in chainedGrammarNodes) {
             var chainedGrammarNode = chainedGrammarNodes[i];
