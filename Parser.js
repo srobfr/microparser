@@ -33,6 +33,8 @@ function Parser(grammar) {
     };
 
     function parseTree(context, chainedGrammarNodes) {
+        console.log(util.inspect(chainedGrammarNodes, {depth: 20, colors: true}));
+
         for(var i in chainedGrammarNodes) {
             var chainedGrammarNode = chainedGrammarNodes[i];
             var m = parseNode(context, chainedGrammarNode);
@@ -61,8 +63,7 @@ function Parser(grammar) {
 
             var nexts = chainedGrammarNode.nexts;
             if(nexts.length > 0) {
-                var treeM = parseTree(nextContext, nexts);
-                m.next = treeM;
+                m.next = parseTree(nextContext, nexts);
             }
         }
 

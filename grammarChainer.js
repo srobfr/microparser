@@ -99,3 +99,7 @@ grammarChainer.chain = function(grammar) {
 
     return firsts;
 };
+
+grammarChainer.dump = function(chainedGrammarNodes) {
+    // TODO
+};
