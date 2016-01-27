@@ -1,6 +1,7 @@
 var util = require("util");
 var microparser = require(__dirname + "/../index.js");
 var fs = require("fs");
+var _ = require("lodash");
 
 var or = microparser.shortGrammar.or;
 var multiple = microparser.shortGrammar.multiple;
@@ -14,10 +15,12 @@ function getGrammar() {
     var packageLine = ["package", w, fullIdent, ";"];
     var importLine = ["import", w, fullIdent, ";"];
     var importLines = multiple(importLine, wo);
+    var blockComment = /^(\/\*)([^]*?)(\*\/)/;
 
     var grammar = [
         packageLine, wo,
-        importLines,
+        importLines, wo,
+        blockComment, wo, "foo"
     ];
 
     return microparser.shortGrammar.convert(grammar);
@@ -28,5 +31,4 @@ var grammar = getGrammar();
 
 var parser = new microparser.Parser(grammar);
 var result = parser.parse(code);
-//
-//console.log(result);
+console.log(util.inspect(result, {depth: 20, colors: true}));
