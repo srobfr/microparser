@@ -12,6 +12,7 @@ function getGrammar() {
     var wo = optional(w);
     var ident = /^[a-zA-Z_$][a-zA-Z\d_$]*/;
     var fullIdent = multiple(ident, ".");
+    //var packageLine = ["package", w, fullIdent, ";"];
     var packageLine = ["package", w, fullIdent, ";"];
     var importLine = ["import", w, fullIdent, ";"];
     var importLines = multiple(importLine, wo);
@@ -20,7 +21,7 @@ function getGrammar() {
     var grammar = [
         packageLine, wo,
         importLines, wo,
-        blockComment, wo, "foo"
+        blockComment, wo
     ];
 
     return microparser.shortGrammar.convert(grammar);
@@ -29,6 +30,8 @@ function getGrammar() {
 var code = fs.readFileSync(__dirname + "/sample.java", "UTF-8");
 var grammar = getGrammar();
 
+console.log(util.inspect(grammar, {depth: 100, colors: true}));
+
 var parser = new microparser.Parser(grammar);
 var result = parser.parse(code);
-console.log(util.inspect(result, {depth: 20, colors: true}));
+console.log(util.inspect(result, {depth: 100, colors: true}));
