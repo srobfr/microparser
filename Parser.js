@@ -22,47 +22,63 @@ function Parser(grammar) {
         // Parsing (1ère passe)
         var parsingResult = parseTree(context, chainedGrammar);
 
-        // Evaluation (2ème passe)
-        var evalResult = [];
-        var m = parsingResult;
-        do {
-            evalResult = m.grammar.result(evalResult, m);
-            m = m.next;
-        } while(m);
-        return evalResult;
+        if (parsingResult.match) {
+            // Evaluation (2ème passe)
+            var evalResult = [];
+            var m = parsingResult;
+            do {
+                evalResult = m.grammar.result(evalResult, m);
+                m = m.next;
+            } while (m);
+            return evalResult;
+        }
+
+        var message = "Syntax error !\nExpected : " + _.map(parsingResult.expected, function(expected) {
+                return util.inspect(expected, {colors: true});
+            }).join(", ") + "\nGot : " + parsingResult.context.code.substr(parsingResult.context.offset, 50);
+        throw new Error(message);
     };
 
     function parseTree(context, chainedGrammarNodes) {
-        for(var i in chainedGrammarNodes) {
+        var longestMatch = null;
+
+        for (var i in chainedGrammarNodes) {
             var chainedGrammarNode = chainedGrammarNodes[i];
             var m = parseNode(context, chainedGrammarNode);
-            if(m.match) {
+            if (m.match) {
                 return m;
+            }
+
+            // Ici, le noeud ne matche pas.
+            if (!longestMatch || m.context.offset >= longestMatch.context.offset) {
+                longestMatch = m;
             }
         }
 
-        // Erreur de syntaxe.
-        var message = "Syntax error !\nExpected : " + _.map(chainedGrammarNodes, function(node) {
-                return util.inspect(node.grammar.value, {colors: true});
-            }).join(", ") + "\nGot : " + context.code.substr(context.offset, 50);
+        longestMatch.expected = longestMatch.expected || _.map(chainedGrammarNodes, function(node) {
+            return node.grammar.value;
+        });
 
-        throw new Error(message);
+        return longestMatch;
     }
 
     function parseNode(context, chainedGrammarNode) {
         var grammar = chainedGrammarNode.grammar;
         var m = grammar.match(context);
         m.grammar = grammar;
-        if(m.match) {
+        m.context = context;
+        if (m.match) {
             var nextContext = {
                 code: context.code,
                 offset: context.offset + m.length
             };
 
             var nexts = chainedGrammarNode.nexts;
-            if(nexts.length > 0) {
-                var treeM = parseTree(nextContext, nexts);
-                m.next = treeM;
+            if (nexts.length > 0) {
+                m.next = parseTree(nextContext, nexts);
+                if(!m.next.match) {
+                    m = m.next;
+                }
             }
         }
 
