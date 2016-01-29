@@ -1,5 +1,4 @@
 var _ = require("lodash");
-var util = require("util");
 var Map = require(__dirname + "/Map.js");
 
 var grammarChainer = {};

@@ -1,13 +1,14 @@
 var util = require("util");
-var microparser = require(__dirname + "/../index.js");
+var microparser = require(__dirname + "/index.js");
 var _ = require("lodash");
 
 var or = microparser.shortGrammar.or;
 var multiple = microparser.shortGrammar.multiple;
 var optional = microparser.shortGrammar.optional;
+var decorate = microparser.shortGrammar.decorate;
 
 // Grammaire
-var w = /^[\s\t\r\n]+/;
+var w = decorate(/^[\s\t\r\n]+/, function(result) {return ["<white>", result, "</white>"];});
 var wo = optional(w);
 var ident = /^[a-zA-Z_$][a-zA-Z\d_$]*/;
 var fullIdent = multiple(ident, ".");
@@ -23,12 +24,9 @@ var g = [
 ];
 
 var grammar = microparser.shortGrammar.convert(g);
-console.log(util.inspect(grammar, {depth: 20, colors: true}));
+var parser = new microparser.parser.Parser(grammar);
 
+var r = parser.parse("package foo.bar.baz; import a; ");
 
-var parser = new microparser.Parser(grammar);
-
-var r = parser.parse("package foo; import a; ");
-
-console.log(util.inspect(_.flattenDeep(r), {depth: 20, colors: true}));
+console.log(util.inspect(r, {depth: 20, colors: true}));
 
