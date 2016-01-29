@@ -1,101 +1,57 @@
 var _ = require("lodash");
-var util = require("util");
 var Map = require(__dirname + "/Map.js");
+var Grammar = require(__dirname + "/grammar.js");
 
 var shortGrammar = {};
-module.exports = shortGrammar;
 
-function _expandString(grammar) {
-    var node = {};
-    node.type = typeof grammar;
-    node.value = grammar;
-
-    // Fonction de match par défaut
-    node.match = function(context) {
-        var r = {};
-        r.length = node.value.length;
-        r.match = (context.code.substr(context.offset, r.length) === node.value);
-        r.code = node.value;
-        return r;
-    };
-
-    // Fonction de résultat par défaut
-    node.result = function(result, match) {
-        return [result, match.code];
-    };
-
-    return node;
-}
-
-function _expandRegex(grammar) {
-    var node = {};
-    node.type = "regex";
-    node.value = grammar;
-
-    // Fonction de match par défaut
-    node.match = function(context) {
-        var m = context.code.substr(context.offset).match(node.value);
-        var r = {};
-        r.match = (m !== null);
-        r.code = (r.match ? m[0] : "");
-        r.length = (r.match ? m[0].length : 0);
-        r.groups = m;
-        return r;
-    };
-
-    // Fonction de résultat par défaut
-    node.result = function(result, match) {
-        return [result, match.code];
-    };
-
-    return node;
-}
-
+/**
+ * Convertit une grammaire au format court en format utilisable par parser.Parser;
+ * @param shortGrammar
+ */
 shortGrammar.convert = function(shortGrammar) {
     var alreadySeenGrammarNodesMap = new Map();
 
-    function _expand(grammar) {
-        if ((/boolean|number|string/).test(typeof grammar)) {
-            return _expandString("" + grammar);
+    function convert(grammar) {
+        if (grammar === "") {
+            return new Grammar.Nothing();
+
+        } else if ((/boolean|number|string/).test(typeof grammar)) {
+            return new Grammar.String("" + grammar);
 
         } else if (grammar instanceof RegExp) {
-            return _expandRegex(grammar);
+            return new Grammar.Regex(grammar);
 
         } else {
             var node = alreadySeenGrammarNodesMap.get(grammar);
             if (node) return node;
 
             if (Array.isArray(grammar)) {
-                node = {type: "sequence"};
+                node = new Grammar.Sequence([]);
                 alreadySeenGrammarNodesMap.set(grammar, node);
-                node.value = [];
 
                 if (grammar.length === 0) {
-                    node.value.push(_expand(''));
+                    node.value.push(convert(''));
                 } else {
                     _.each(grammar, function(g) {
-                        node.value.push(_expand(g));
+                        node.value.push(convert(g));
                     });
                 }
 
             } else if (grammar.type === "or" && grammar.value) {
-                node = {type: grammar.type};
+                node = new Grammar.Or([]);
                 alreadySeenGrammarNodesMap.set(grammar, node);
-                node.value = _.map(grammar.value, _expand);
-
-            } else if (grammar.type && grammar.value) {
-                node = grammar;
-                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = _.map(grammar.value, convert);
 
             } else {
-                throw new Error("Unrecognized grammar format : " + util.inspect(grammar));
+                node = grammar;
+                alreadySeenGrammarNodesMap.set(grammar, node);
             }
 
             return node;
         }
     }
 
-    return _expand(shortGrammar);
+    return convert(shortGrammar);
 };
 
 shortGrammar.or = function() {
@@ -112,3 +68,14 @@ shortGrammar.multiple = function(grammar, separatorGrammar) {
     r.push(shortGrammar.optional(s));
     return r;
 };
+
+shortGrammar.decorate = function(grammar, decorator) {
+    var node = shortGrammar.convert(grammar);
+    var nodeResultFunction = node.result;
+    node.result = function(match) {
+        return decorator(nodeResultFunction(match));
+    };
+    return node;
+};
+
+module.exports = shortGrammar;

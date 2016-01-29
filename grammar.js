@@ -1,12 +1,13 @@
 var _ = require("lodash");
 var parser = require(__dirname + "/parser.js");
 
+var grammar = {};
+
 /**
  * Représente un noeud de grammaire, qui matche une chaîne.
  * @param value
  * @constructor
  */
-var grammar = {};
 grammar.String = function(value) {
     var that = this;
     that.value = value;
@@ -23,6 +24,11 @@ grammar.String = function(value) {
     };
 };
 
+/**
+ * Représente un noeud de grammaire, qui matche une regex.
+ * @param value
+ * @constructor
+ */
 grammar.Regex = function(value) {
     var that = this;
     that.value = value;
@@ -46,6 +52,10 @@ grammar.Regex = function(value) {
     };
 };
 
+/**
+ * Représente un noeud de grammaire, qui matche systématiquement.
+ * @constructor
+ */
 grammar.Nothing = function() {
     var that = this;
     that.match = function(context) {

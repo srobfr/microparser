@@ -1,6 +1,7 @@
 var microparser = {};
-module.exports = microparser;
 
+microparser.parser = require(__dirname + "/parser.js");
+microparser.grammar = require(__dirname + "/grammar.js");
 microparser.shortGrammar = require(__dirname + "/shortGrammar.js");
 
-microparser.Parser = require(__dirname + "/Parser.js");
+module.exports = microparser;
