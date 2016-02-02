@@ -16,7 +16,7 @@ var fullIdent = multiple(ident, ".");
 var packageLine = decorate(
     ["package", w, fullIdent, ";"],
     function(result) {
-        return "// This was a package definition.";
+        return "// This was a package line.";
     });
 
 var importLine = ["import", w, fullIdent, ";"];

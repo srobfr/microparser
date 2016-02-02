@@ -1,5 +1,6 @@
 var _ = require("lodash");
-var parser = require(__dirname + "/parser.js");
+var Match = require(__dirname + "/parser.js").Match;
+var Context = require(__dirname + "/parser.js").Context;
 
 var grammar = {};
 
@@ -12,7 +13,7 @@ grammar.String = function(value) {
     var that = this;
     that.value = value;
     that.match = function(context) {
-        var match = new parser.Match(context, that);
+        var match = new Match(context, that);
         match.matchedLength = that.value.length;
         match.match = (context.code.substr(context.offset, match.matchedLength) === that.value);
         match.expected.push(that.value);
@@ -33,7 +34,7 @@ grammar.Regex = function(value) {
     var that = this;
     that.value = value;
     that.match = function(context) {
-        var match = new parser.Match(context, that);
+        var match = new Match(context, that);
         var code = context.code.substr(context.offset);
         var m = code.match(that.value);
 
@@ -59,7 +60,7 @@ grammar.Regex = function(value) {
 grammar.Nothing = function() {
     var that = this;
     that.match = function(context) {
-        var match = new parser.Match(context, that);
+        var match = new Match(context, that);
         match.expected.push(null);
         match.match = true;
         match.matchedLength = 0;
@@ -77,7 +78,7 @@ grammar.Sequence = function(value) {
     that.value = value;
     that.match = function(context) {
         // On tente de matcher tous les sous-noeuds
-        var match = new parser.Match(context, that);
+        var match = new Match(context, that);
         match.match = true;
 
         var currentContext = context;
@@ -90,7 +91,7 @@ grammar.Sequence = function(value) {
 
             match.subMatches.push(subMatch);
             match.matchedLength += subMatch.matchedLength;
-            currentContext = new parser.Context(currentContext.code, currentContext.offset + subMatch.matchedLength);
+            currentContext = new Context(currentContext.code, currentContext.offset + subMatch.matchedLength);
         }
 
         return match;
@@ -116,7 +117,7 @@ grammar.Or = function(value) {
     that.value = value;
     that.match = function(context) {
         // On tente de matcher au moins un sous-noeuds
-        var match = new parser.Match(context, that);
+        var match = new Match(context, that);
         match.match = false;
 
         var longestSubMatch = null;
