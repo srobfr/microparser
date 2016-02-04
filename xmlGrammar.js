@@ -91,6 +91,10 @@ xmlGrammar.not = function(grammar) {
     return {type: "not", value: grammar};
 };
 
+xmlGrammar.test = function(grammar) {
+    return {type: "test", value: grammar};
+};
+
 xmlGrammar.optional = function(grammar) {
     return xmlGrammar.or(grammar, xmlGrammar.not(grammar));
 };
