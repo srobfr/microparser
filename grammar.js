@@ -1,4 +1,5 @@
 var _ = require("lodash");
+//var util = require("util");
 var Match = require(__dirname + "/parser.js").Match;
 var Context = require(__dirname + "/parser.js").Context;
 
@@ -104,6 +105,40 @@ grammar.Sequence = function(value) {
             r.push(match.grammar.result(match));
         });
         return r;
+    };
+};
+
+/**
+ * Représente un noeud de grammaire, qui matche mais sans avancer le pointeur.
+ * @param value
+ * @constructor
+ */
+grammar.Test = function(value) {
+    var that = this;
+    that.value = value;
+    that.match = function(context) {
+        var subMatch = that.value.match(context);
+        var match = new Match(context, that);
+        match.match = subMatch.match;
+        return match;
+    };
+};
+
+/**
+ * Représente un noeud de grammaire, qui ne matche que si son sous-noeud ne matche pas.
+ * @param value
+ * @constructor
+ */
+grammar.Not = function(value) {
+    var that = this;
+    that.value = value;
+    that.match = function(context) {
+        var subMatch = that.value.match(context);
+        var match = new Match(context, that);
+        match.match = !subMatch.match;
+        match.subMatches.push(subMatch);
+        match.expected = match.expected.concat({not: subMatch.expected});
+        return match;
     };
 };
 

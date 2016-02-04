@@ -61,6 +61,16 @@ xmlGrammar.convert = function(grammar) {
                 alreadySeenGrammarNodesMap.set(grammar, node);
                 node.value = _.map(grammar.value, convert);
 
+            } else if (grammar.type === "not" && grammar.value) {
+                node = new Grammar.Not(null);
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = convert(grammar.value);
+
+            } else if (grammar.type === "test" && grammar.value) {
+                node = new Grammar.Test(null);
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = convert(grammar.value);
+
             } else {
                 node = grammar;
                 alreadySeenGrammarNodesMap.set(grammar, node);
@@ -77,22 +87,28 @@ xmlGrammar.or = function() {
     return {type: "or", value: _.toArray(arguments)};
 };
 
-xmlGrammar.optional = function(grammar) {
-    return xmlGrammar.or(grammar, '');
+xmlGrammar.not = function(grammar) {
+    return {type: "not", value: grammar};
 };
 
-xmlGrammar.multiple = function(grammar, separatorGrammar) {
+xmlGrammar.optional = function(grammar) {
+    return xmlGrammar.or(grammar, xmlGrammar.not(grammar));
+};
+
+xmlGrammar.multiple = function(grammar, separator) {
     var r = [grammar];
-    var s = (separatorGrammar ? [separatorGrammar, r] : r);
+    var s = (separator ? [separator, r] : r);
     r.push(xmlGrammar.optional(s));
     return r;
 };
 
-xmlGrammar.multipleUngreedy = function(grammar, separatorGrammar) {
-    var one = grammar;
-    var more = [];
-    more.push(separatorGrammar ? [grammar, separatorGrammar, more] : [grammar, grammar]);
-
+xmlGrammar.until = function(grammar, separator, next) {
+    var nn = (separator ? [separator] : []);
+    var r = [
+        grammar,
+        {type: "or", value: [{type: "test", value: next}, nn]}
+    ];
+    nn.push(r);
     return r;
 };
 
