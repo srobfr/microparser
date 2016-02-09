@@ -117,7 +117,7 @@ xmlGrammar.until = function(grammar, separator, next) {
 };
 
 xmlGrammar.decorate = function(grammar, decorator) {
-    var node = xmlGrammar.convert(grammar);
+    var node = xmlGrammar.convert([grammar]);
     var nodeResultFunction = node.result;
     node.result = function(match) {
         return decorator(nodeResultFunction(match));
