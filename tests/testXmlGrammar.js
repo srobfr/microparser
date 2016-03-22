@@ -21,8 +21,10 @@ var grammar = [
 
 //console.log(util.inspect(g, {depth: 20, colors: true}));
 var parser = new microparser.parser.Parser(g.convert(grammar));
-var r = parser.parse("Simon L Robert <srob@srob.fr>");
+var pR = parser.parse("Simon L Robert <srob@srob.fr>");
+pR.done(function(r) {
+    console.log(util.inspect(r, {depth: 20, colors: true}));
+    console.log(_.flattenDeep(r).join(""));
+});
 
-console.log(util.inspect(r, {depth: 20, colors: true}));
-console.log(_.flattenDeep(r).join(""));
 

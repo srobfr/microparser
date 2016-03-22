@@ -42,24 +42,25 @@ parser.Parser = function(grammar) {
     that.parse = function(code) {
         // On crée le contexte initial
         var context = new parser.Context(code, 0);
-        var match = grammar.match(context);
+        var pMatch = grammar.match(context);
+        return pMatch.then(function(match) {
+            if(!match.match) {
+                var message = "Syntax error !\nExpected : " + _.map(match.expected, function(expected) {
+                        return util.inspect(expected, {colors: true});
+                    }).join(", ") + "\nGot : " + match.context.code.substr(match.context.offset, 50);
+                throw new Error(message);
+            }
 
-        if(!match.match) {
-            var message = "Syntax error !\nExpected : " + _.map(match.expected, function(expected) {
-                    return util.inspect(expected, {colors: true});
-                }).join(", ") + "\nGot : " + match.context.code.substr(match.context.offset, 50);
-            throw new Error(message);
-        }
+            // Ici on a un match.
+            // On va calculer le résultat.
+            var result = [];
+            if(match.grammar.result) {
+                var r = match.grammar.result(match);
+                if(r !== undefined) result = r;
+            }
 
-        // Ici on a un match.
-        // On va calculer le résultat.
-        var result = [];
-        if(match.grammar.result) {
-            var r = match.grammar.result(match);
-            if(r !== undefined) result = r;
-        }
-
-        return result;
+            return result;
+        });
     };
 };
 
