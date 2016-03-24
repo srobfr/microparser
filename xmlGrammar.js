@@ -61,6 +61,11 @@ xmlGrammar.convert = function(grammar) {
                 alreadySeenGrammarNodesMap.set(grammar, node);
                 node.value = _.map(grammar.value, convert);
 
+            } else if (grammar.type === "multiple" && grammar.value) {
+                node = new Grammar.Multiple(null);
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value = convert(grammar.value);
+
             } else if (grammar.type === "not" && grammar.value) {
                 node = new Grammar.Not(null);
                 alreadySeenGrammarNodesMap.set(grammar, node);
@@ -100,20 +105,17 @@ xmlGrammar.optional = function(grammar) {
 };
 
 xmlGrammar.multiple = function(grammar, separator) {
-    var r = [grammar];
-    var s = (separator ? [separator, r] : r);
-    r.push(xmlGrammar.optional(s));
-    return r;
+    return [
+        grammar,
+        {type: "multiple", value: (separator === undefined ? grammar : [separator, grammar])}
+    ];
 };
 
 xmlGrammar.until = function(grammar, separator, next) {
-    var nn = (separator ? [separator] : []);
-    var r = [
-        grammar,
-        {type: "or", value: [{type: "test", value: next}, nn]}
-    ];
-    nn.push(r);
-    return r;
+    var notNext = xmlGrammar.not(next);
+    var one = [notNext, grammar];
+    var s = (separator ? [notNext, separator] : undefined);
+    return xmlGrammar.multiple(one, s);
 };
 
 xmlGrammar.decorate = function(grammar, decorator) {

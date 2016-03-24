@@ -86,6 +86,7 @@ grammar.Sequence = function(value) {
         for(var i = 0, l = that.value.length; i < l; i++) {
             var subGrammar = that.value[i];
             var subMatch = subGrammar.match(currentContext);
+            match.expected = subMatch.expected;
             if(!subMatch.match) {
                 return subMatch;
             }
@@ -120,6 +121,7 @@ grammar.Test = function(value) {
         var subMatch = that.value.match(context);
         var match = new Match(context, that);
         match.match = subMatch.match;
+        match.expected = match.expected.concat(subMatch.expected);
         return match;
     };
 };
@@ -185,5 +187,45 @@ grammar.Or = function(value) {
         return r;
     };
 };
+
+/**
+ * Représente un noeud de grammaire, qui matche zéro ou plusieurs fois.
+ * @param value
+ * @constructor
+ */
+grammar.Multiple = function(value) {
+    var that = this;
+    that.value = value;
+    that.match = function(context) {
+        // On tente de matcher plusieurs fois le sous-noeud
+        var match = new Match(context, that);
+        var currentContext = context;
+        match.match = true;
+        while(true) {
+            var subGrammar = that.value;
+            var subMatch = subGrammar.match(currentContext);
+            if(!subMatch.match) {
+                break;
+            }
+
+            match.subMatches.push(subMatch);
+            match.matchedLength += subMatch.matchedLength;
+            currentContext = new Context(currentContext.code, currentContext.offset + subMatch.matchedLength);
+        }
+
+        match.expected = match.expected.concat(subMatch.expected);
+        return match;
+    };
+
+    that.result = function(match) {
+        var r = [];
+        _.each(match.subMatches, function(match) {
+            if(!match.grammar.result) return;
+            r.push(match.grammar.result(match));
+        });
+        return r;
+    };
+};
+
 
 module.exports = grammar;

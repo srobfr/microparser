@@ -7,9 +7,9 @@ var g = microparser.xmlGrammar;
 // Grammaire
 var w = /^[\s\t\r\n]+/;
 
-var email = g.tag("email", /^.+?@.+?\.\w+/);
 var name = g.tag("name", /^\w+/);
-var surname = g.tag("surname", /^\w+/);
+var surname = g.tag("surname", "Robert");
+var email = g.tag("email", /^.+?@.+?\.\w+/);
 
 var afterName = [w, surname, w, "<", email, ">"];
 var names = g.until(name, w, afterName);
@@ -19,9 +19,12 @@ var grammar = [
     /^$/
 ];
 
-//console.log(util.inspect(g, {depth: 20, colors: true}));
-var parser = new microparser.parser.Parser(g.convert(grammar));
-var r = parser.parse("Simon L Robert <srob@srob.fr>");
+var code = "Simon S Robert <srob@srob.fr>";
+
+var G = g.convert(grammar);
+//console.log(util.inspect(G, {depth: 20, colors: true}));
+var parser = new microparser.parser.Parser(G);
+var r = parser.parse(code);
 
 console.log(util.inspect(r, {depth: 20, colors: true}));
 console.log(_.flattenDeep(r).join(""));
