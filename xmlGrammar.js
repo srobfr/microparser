@@ -56,6 +56,16 @@ xmlGrammar.convert = function(grammar) {
                     });
                 }
 
+            } else if (grammar.type === "decorate" && grammar.value) {
+                node = new Grammar.Sequence([]);
+                alreadySeenGrammarNodesMap.set(grammar, node);
+                node.value.push(convert(grammar.value));
+                var prevNodeResult = node.result;
+                node.result = function(match) {
+                    var r = grammar.decorator(prevNodeResult(match));
+                    return r;
+                };
+
             } else if (grammar.type === "or" && grammar.value) {
                 node = new Grammar.Or([]);
                 alreadySeenGrammarNodesMap.set(grammar, node);
@@ -119,12 +129,7 @@ xmlGrammar.until = function(grammar, separator, next) {
 };
 
 xmlGrammar.decorate = function(grammar, decorator) {
-    var node = xmlGrammar.convert([grammar]);
-    var nodeResultFunction = node.result;
-    node.result = function(match) {
-        return decorator(nodeResultFunction(match));
-    };
-    return node;
+    return {type: "decorate", value: grammar, decorator: decorator};
 };
 
 xmlGrammar.tag = function(tag, grammar) {
