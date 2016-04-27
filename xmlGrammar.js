@@ -138,4 +138,12 @@ xmlGrammar.tag = function(tag, grammar) {
     });
 };
 
+xmlGrammar.parse = function(code, grammar) {
+    var Parser = require(__dirname + "/parser.js").Parser;
+    var fullGrammar = xmlGrammar.convert(grammar);
+    var parser = new Parser(fullGrammar);
+    var result = parser.parse(code);
+    return '<?xml version="1.0"?>' + "\n<root>" + _.flattenDeep(result).join("") + "</root>";
+};
+
 module.exports = xmlGrammar;
