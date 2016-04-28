@@ -42,7 +42,7 @@ You cannot use regexs to parse nested structures and writing BNF grammars is ove
 
 ## FAQ
 
-### So you parse come code, generate xml and then parse this xml. WTF ?
+### So you parse some code, generate xml and then parse this xml. WTF ?
 
 Ok, this sounds complicated. But :
 
