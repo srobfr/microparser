@@ -1,6 +1,6 @@
 {
   "name": "microparser",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "MicroParser",
   "readme": "README.md",
   "main": "index.js",
