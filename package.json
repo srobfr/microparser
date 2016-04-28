@@ -2,7 +2,6 @@
   "name": "microparser",
   "version": "3.0.2",
   "description": "MicroParser",
-  "readme": "README.md",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
