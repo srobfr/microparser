@@ -1,5 +1,4 @@
 var _ = require("lodash");
-var Map = require(__dirname + "/Map.js");
 var Grammar = require(__dirname + "/grammar.js");
 
 var xmlGrammar = {};
