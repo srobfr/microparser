@@ -9,6 +9,7 @@
   "author": "Simon Robert",
   "license": "MIT",
   "dependencies": {
+    "cheerio": "^0.22.0",
     "lodash": "^4.0.0"
   },
   "devDependencies": {},
