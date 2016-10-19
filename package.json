@@ -1,6 +1,6 @@
 {
   "name": "microparser",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "MicroParser",
   "main": "microparser.js",
   "scripts": {
