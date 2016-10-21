@@ -1,5 +1,5 @@
 var _ = require("lodash");
-var cheerio = require("cheerio");
+var mpCheerio = require(__dirname + "/mp-cheerio.js");
 var Context = require(__dirname + "/Context.js");
 var compiledGrammarTypes = require(__dirname + "/compiledGrammarTypes.js");
 
@@ -102,6 +102,7 @@ function Parser(grammar) {
     /**
      * Parses the given code.
      * @param code
+     * @param $ optional cheerio DOM
      * @return {Cheerio}
      */
     that.parse = function (code, $) {
@@ -130,12 +131,7 @@ function Parser(grammar) {
         // Build a DOM part from this xml.
         if (!$) {
             // No DOM was provided, so we create a new one.
-            $ = cheerio.load('<?xml version="1.0"?>' + "\n<root>" + xml + "</root>", {xmlMode: true});
-            $.prototype.$ = $;
-            $.prototype.xml = function() {
-                return $.xml(this);
-            };
-
+            $ = mpCheerio.load('<?xml version="1.0"?>' + "\n<root>" + xml + "</root>", {xmlMode: true});
             return $.root().children("root");
         }
 
