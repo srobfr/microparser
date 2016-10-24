@@ -1,5 +1,6 @@
 var microparser = require(__dirname + "/../microparser.js");
 var g = microparser.grammarHelper;
+var $ = microparser.$;
 
 // The code to parse.
 var code = "I am a text with 3 (nested ((parentheses) blocks))";
@@ -28,7 +29,7 @@ var anything = g.multiple(g.or(taggedNumber, word, spaces, block));
 anythingPlaceHolder.push(anything);
 
 // The full grammar is (at least one taggedNumber, word, spaces or block), followed by the end of code.
-var grammar = [anything, endOfString];
+var grammar = g.tag("root", [anything, endOfString]);
 
 // Compile grammar and build the parser.
 var parser = microparser.buildParser(grammar);
@@ -37,5 +38,5 @@ var parser = microparser.buildParser(grammar);
 var $root = parser.parse(code);
 
 console.log("#### Full DOM XML ####");
-console.log($root.$.xml());
+console.log($.xml($root));
 

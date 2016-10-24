@@ -1,5 +1,6 @@
 var GrammarHelper = require(__dirname + "/GrammarHelper.js");
 var Parser = require(__dirname + "/Parser.js");
+var $ = require(__dirname + "/mp-cheerio.js");
 
 /**
  * Main component.
@@ -26,13 +27,18 @@ function Microparser() {
      * Builds a parser, parses the code then returns the resulting DOM.
      * @param code
      * @param grammar
-     * @param $ optional cheerio DOM
      * @return {Cheerio}
      */
-    that.parse = function (code, grammar, $) {
+    that.parse = function (code, grammar) {
         var parser = that.buildParser(grammar);
-        return parser.parse(code, $);
+        return parser.parse(code);
     };
+
+    /**
+     * Cheerio instance specific to microparser.
+     * @type {Cheerio}
+     */
+    that.$ = $;
 }
 
 module.exports = new Microparser();

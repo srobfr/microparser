@@ -1,46 +1,48 @@
 var cheerio = require("cheerio");
 
-var originalCheerioLoad = cheerio.load;
-cheerio.load = function() {
-    var $ = originalCheerioLoad.apply(this, arguments);
+// New cheerio instance with mp-specific options.
+var $ = cheerio.load("", {xmlMode: true});
 
-    // Inject the DOM in each elements.
-    $.prototype.$ = $;
-
-    /**
-     * Returns an element xml code.
-     * @return {string}
-     */
-    $.prototype.xml = function() {
-        return $.xml(this);
-    };
-
-    /**
-     * Elements creation from xml string, like $(html)
-     * @return {$}
-     */
-    $.prototype.create = function() {
-        return $.apply(undefined, arguments);
-    };
-
-    /**
-     * Removes the text preceding the node.
-     */
-    $.prototype.removePreviousText = function() {
-        this.each(function(undefined, node) {
-            var n = node.prev;
-            var nodes = [];
-            while (n && n.type === "text") {
-                nodes.push(n);
-                n = n.prev;
-            }
-
-            $(nodes).remove();
-        });
-        return this;
-    };
-
-    return $;
+/**
+ * Returns the node XML code. Useful for caching & debugging.
+ * @return {string}
+ */
+$.prototype.xml = function() {
+    return $.xml(this);
 };
 
-module.exports = cheerio;
+/**
+ * Removes the text preceding the node.
+ */
+$.prototype.removePreviousText = function() {
+    this.each(function(undefined, node) {
+        var n = node.prev;
+        var nodes = [];
+        while (n && n.type === "text") {
+            nodes.push(n);
+            n = n.prev;
+        }
+
+        $(nodes).remove();
+    });
+    return this;
+};
+
+/**
+ * Removes the text following the node.
+ */
+$.prototype.removeNextText = function() {
+    this.each(function(undefined, node) {
+        var n = node.next;
+        var nodes = [];
+        while (n && n.type === "text") {
+            nodes.push(n);
+            n = n.next;
+        }
+
+        $(nodes).remove();
+    });
+    return this;
+};
+
+module.exports = $;
