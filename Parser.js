@@ -3,7 +3,6 @@ const CompiledGrammar = require(__dirname + "/CompiledGrammar.js");
 const Node = require(__dirname + "/Dom/Node.js");
 const lexer = require(__dirname + "/Lexer/lexer.js");
 
-
 /**
  * Parser
  * @param options

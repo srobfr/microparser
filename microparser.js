@@ -1,3 +1,8 @@
+/**
+ * Microparser
+ * (C) Simon Robert 2017 GNU GPL
+ */
 module.exports = {
-    // TODO
+    Parser: require(__dirname) + "/Parser.js",
+    grammarHelpers: require(__dirname) + "/grammarHelpers.js",
 };
