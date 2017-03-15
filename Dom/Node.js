@@ -15,12 +15,12 @@ function Node() {
 }
 
 Node.prototype.text = function () {
-    return this.children.map(function(child) {
+    return this.children.map(function (child) {
         return (typeof child === "string" ? child : child.text());
     }).join("");
 };
 
-Node.prototype.remove = function () {
+Node.prototype.unlink = function () {
     if (this.next) this.next.prev = this.prev;
     if (this.prev) this.prev.next = this.next;
     if (this.parent) {
@@ -30,7 +30,7 @@ Node.prototype.remove = function () {
 };
 
 Node.prototype.append = function (node) {
-    node.remove();
+    node.unlink();
     if (this.children.length > 0) {
         let prevNode = this.children[this.children.length - 1];
         prevNode.next = node;
@@ -41,7 +41,7 @@ Node.prototype.append = function (node) {
 };
 
 Node.prototype.prepend = function (node) {
-    node.remove();
+    node.unlink();
     if (this.children.length > 0) {
         let nextNode = this.children[0];
         nextNode.prev = node;
@@ -52,7 +52,7 @@ Node.prototype.prepend = function (node) {
 };
 
 Node.prototype.before = function (node) {
-    node.remove();
+    node.unlink();
     node.prev = this.prev;
     node.next = this;
     node.parent = this.parent;
@@ -65,7 +65,7 @@ Node.prototype.before = function (node) {
 };
 
 Node.prototype.after = function (node) {
-    node.remove();
+    node.unlink();
     node.prev = this;
     node.next = this.next;
     node.parent = this.parent;
@@ -78,7 +78,7 @@ Node.prototype.after = function (node) {
 };
 
 Node.prototype.replaceWith = function (node) {
-    node.remove();
+    node.unlink();
     node.prev = this.prev;
     node.next = this.next;
     node.parent = this.parent;
@@ -103,8 +103,11 @@ Node.prototype.findParent = function (query) {
 
 
 Node.prototype.find = function (query) {
+    const q = query;
+    if (!_.isFunction(query)) query = ((n) => n.grammar === q);
+
     let results = [];
-    if (this.grammar === query) {
+    if (query(this)) {
         results.push(this);
         return results; // Optimization
     }
@@ -118,7 +121,10 @@ Node.prototype.find = function (query) {
 };
 
 Node.prototype.findOne = function (query) {
-    if (this.grammar === query) return this;
+    const q = query;
+    if (!_.isFunction(query)) query = ((n) => n.grammar === q);
+
+    if (query(this)) return this;
     let result = null;
     _.each(this.children, function (node) {
         if (_.isString(node)) return;
@@ -131,11 +137,13 @@ Node.prototype.findOne = function (query) {
 };
 
 Node.prototype.setCode = function (code) {
-    // TODO injecter le parser dans chaque node
-
-    const Parser = require(__dirname + "/Parser.js");
-    const $newNode = Parser.parse(this.grammar, code);
+    const that = this;
+    const $newNode = that.parser.parse(this.grammar, code);
     this.children = $newNode.children;
+    this.children.map((n) => {
+        n.parent = that;
+    });
+
     return this;
 };
 

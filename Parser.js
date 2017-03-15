@@ -3,7 +3,6 @@ const CompiledGrammar = require(__dirname + "/CompiledGrammar.js");
 const Node = require(__dirname + "/Dom/Node.js");
 const lexer = require(__dirname + "/Lexer/lexer.js");
 
-const defaultOptions = {};
 
 /**
  * Parser
@@ -12,6 +11,13 @@ const defaultOptions = {};
  */
 function Parser(options) {
     const that = this;
+    options = options || {};
+
+    const defaultOptions = {
+        checkGrammar: false,
+        nodeDecorator: require(__dirname + "/defaultNodeDecorator.js")
+    };
+
     _.defaultsDeep(options, defaultOptions);
 
     /**
@@ -44,8 +50,8 @@ function Parser(options) {
                 n.children.push(context.matched);
             }
 
-            // TODO Get this right
-            if (_.isFunction(decorator)) decorator(n);
+            // Decorate the node for specific logic
+            if (_.isFunction(options.nodeDecorator)) options.nodeDecorator(n);
         });
 
         const result = _.first(root.children);
@@ -57,11 +63,11 @@ function Parser(options) {
         return null;
     };
 
-    that.parse = function (grammar, code, doCheck) {
+    that.parse = function (grammar, code) {
         const cg = CompiledGrammar.build(grammar);
-        if (doCheck) cg.check();
+        if (options.checkGrammar) cg.check();
         const chain = lexer.lex(cg, code);
-        return that.buildDom(chain);
+        return that.buildDomFromContextsChain(chain);
     };
 }
 
