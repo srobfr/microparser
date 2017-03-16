@@ -9,6 +9,7 @@ const Context = require(__dirname + "/Context.js");
  * @param expected
  */
 function reportSyntaxError(code, bestOffset, expected) {
+    expected = _.uniq(expected);
     let lines = code.split("\n");
     let o = 0;
     _.each(lines, function (line, i) {

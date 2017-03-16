@@ -44,4 +44,4 @@ function optmul(grammar, separator) {
     return {type: "optmul", value: grammar, separator: separator};
 }
 
-module.exports = {or, optional, multiple, optmul};
+module.exports = {multiple, optional, optmul, or};

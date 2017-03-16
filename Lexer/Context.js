@@ -14,8 +14,7 @@ function Context(cg, offset, code, parent, previous) {
     that.match = () => {
         const grammar = that.cg.grammar;
 
-        if (that.cg.type === CompiledGrammar.END
-            || _.isArray(grammar) || grammar.type) that.matched = true;
+        if (that.cg.type === CompiledGrammar.END || _.isArray(grammar) || grammar.type) that.matched = true;
         else if (grammar === null) that.matched = (offset >= code.length ? true : null);
         else if (_.isString(grammar)) that.matched = (code.substr(that.offset, grammar.length) === grammar ? grammar : null);
         else if (_.isRegExp(grammar)) {
