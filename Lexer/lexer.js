@@ -42,6 +42,7 @@ function reportSyntaxError(code, bestOffset, expected) {
  * @return {[int,Array.<*>]}
  */
 function handleExpected(context, bestOffset, expected) {
+    // TODO Handle not()
     if (context.offset >= bestOffset) {
         if (context.offset > bestOffset) {
             bestOffset = context.offset;
@@ -88,6 +89,7 @@ function lex(cg, code) {
 
         // Contextes suivants.
         _.eachRight(nextContexts, function (nextContext) {
+            console.log("Pushing  " + nextContext.dump());
             toVisit.push(nextContext);
         });
     }

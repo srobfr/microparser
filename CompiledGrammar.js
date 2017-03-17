@@ -26,9 +26,17 @@ CompiledGrammar.START = 0;
 CompiledGrammar.END = 1;
 
 /**
- * Provides a string representation of the Compiled grammar node.
+ * Provides a string representation of the Compiled grammar node's full path.
  */
 CompiledGrammar.prototype.dump = function () {
+    const op = this.type === CompiledGrammar.START ? "Start" : "End";
+    return this.uid + `: ${op} ` + require("util").inspect(this.grammar, {colors: true, hidden: true, depth: 30});
+};
+
+/**
+ * Provides a string representation of the Compiled grammar node's full path.
+ */
+CompiledGrammar.prototype.dumpPath = function () {
     const visitedNodes = new Map();
     let toVisit = [this];
     const lines = ["=== Dump for compiled grammar : " + require("util").inspect(this.grammar, {colors: true, hidden: true, depth: 30})];
@@ -47,9 +55,7 @@ CompiledGrammar.prototype.dump = function () {
 
         nexts = (nexts.length > 0 ? "go to " + nexts.join(" or ") : "*Finished*.");
 
-        const op = node.type === CompiledGrammar.START ? "Start" : "End";
-        lines.push(node.uid + `: ${op} ` + require("util").inspect(node.grammar, {colors: true, hidden: true, depth: 30})
-            + " then " + nexts);
+        lines.push(node.dump() + " then " + nexts);
     }
 
     return lines.join("\n");
@@ -103,6 +109,13 @@ function sequenceStrategy(compiledGrammar, _compiledGrammarsByGrammar) {
 }
 
 function optionalStrategy(compiledGrammar, _compiledGrammarsByGrammar) {
+    const subCompiledGrammar = CompiledGrammar.build(compiledGrammar.grammar.value, _compiledGrammarsByGrammar);
+    compiledGrammar.next.push(subCompiledGrammar);
+    compiledGrammar.next.push(compiledGrammar.peer); // Premature exit
+    subCompiledGrammar.peer.next.push(compiledGrammar.peer);
+}
+
+function notStrategy(compiledGrammar, _compiledGrammarsByGrammar) {
     const subCompiledGrammar = CompiledGrammar.build(compiledGrammar.grammar.value, _compiledGrammarsByGrammar);
     compiledGrammar.next.push(subCompiledGrammar);
     compiledGrammar.next.push(compiledGrammar.peer); // Premature exit
@@ -167,6 +180,7 @@ CompiledGrammar.build = function (grammar, _compiledGrammarsByGrammar) {
         if (grammar.type === "multiple") strategy = multipleStrategy;
         if (grammar.type === "optmul") strategy = optmulStrategy;
         if (grammar.type === "or") strategy = orStrategy;
+        if (grammar.type === "not") strategy = notStrategy;
     }
 
     if (!strategy) throw new Error("Unrecognized grammar type : " + require("util").inspect(grammar));

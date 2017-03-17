@@ -2,7 +2,7 @@ const _ = require("lodash");
 const assert = require('assert');
 const CompiledGrammar = require(__dirname + "/../CompiledGrammar.js");
 const lexer = require(__dirname + "/../Lexer/lexer.js");
-const {or, optional, multiple, optmul} = require(__dirname + "/../grammarHelpers.js");
+const {multiple, not, optional, optmul, or} = require(__dirname + "/../grammarHelpers.js");
 
 describe('Lexer', function () {
     describe('Simple', function () {
@@ -37,6 +37,30 @@ FooBar
             cg.check();
             const chain = lexer.lex(cg, code);
             assert.equal(chain.length, 6);
+        });
+
+        it.only('Not', function () {
+            const g = [not("a"), /^\w+/];
+            const code = `foo`;
+            const cg = CompiledGrammar.build(g);
+            cg.check();
+            const chain = lexer.lex(cg, code);
+            // TODO
+        });
+
+        it.only('Not (error)', function () {
+            const g = or([not("a"), /^\w+/], "afoo");
+            const code = `afoo`;
+            const cg = CompiledGrammar.build(g);
+            cg.check();
+            try {
+                const chain = lexer.lex(cg, code);
+                assert.fail("Should throw an error");
+            } catch (e) {
+                assert.equal(e.message, `Syntax error on line 1, column 1:
+afoo
+^ expected 'TODO'`);
+            }
         });
 
         it('Too much code 2', function () {

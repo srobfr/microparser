@@ -1,21 +1,21 @@
 const _ = require("lodash");
 const assert = require('assert');
 const CompiledGrammar = require(__dirname + "/../CompiledGrammar.js");
-const {or, optional, multiple, optmul} = require(__dirname + "/../grammarHelpers.js");
+const {multiple, not, optional, optmul, or} = require(__dirname + "/../grammarHelpers.js");
 
 describe('CompiledGrammar', function () {
     it('String', () => {
         let g = "foo";
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Regex', () => {
         let g = /^foo/;
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Regex without ^', () => {
@@ -33,7 +33,14 @@ describe('CompiledGrammar', function () {
         let g = ["foo", "bar"];
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
+    });
+
+    it('Not', () => {
+        let g = [not("a"), /^\w+/];
+        const cg = CompiledGrammar.build(g);
+        cg.check();
+        console.log(cg.dumpPath());
     });
 
     it('Recursion with exit', function () {
@@ -59,42 +66,42 @@ describe('CompiledGrammar', function () {
         let g = or("foo", "bar");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Optional', () => {
         let g = optional("foo");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Multiple', () => {
         let g = multiple("foo");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Multiple with separator', () => {
         let g = multiple("foo", ",");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Optional multiple', () => {
         let g = optmul("foo");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Optional multiple with separator', () => {
         let g = optmul("foo", ",");
         const cg = CompiledGrammar.build(g);
         cg.check();
-        console.log(cg.dump());
+        console.log(cg.dumpPath());
     });
 
     it('Unrecognized grammar type', function () {

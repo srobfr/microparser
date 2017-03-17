@@ -10,11 +10,26 @@ function Context(cg, offset, code, parent, previous) {
     that.endOffset = null;
     that.matched = null;
 
-    that.isFinal = () => (that.cg.next.length === 0);
+    that.dump = function() {
+        return that.cg.dump() + " @" + that.offset + " : " + code.substr(that.offset, 30);
+    };
+
     that.match = () => {
         const grammar = that.cg.grammar;
 
-        if (that.cg.type === CompiledGrammar.END || _.isArray(grammar) || grammar.type) that.matched = true;
+        if (that.cg.type === CompiledGrammar.END && grammar.type === "not") {
+            if(that.cg.peer === that.previous.cg) {
+                // The sub grammar did not match.
+                const peer = that.previous;
+                that.matched = peer.matched;
+            } else {
+                // Mark the peer context as non-matching
+                const peer = that.previous.parent;
+                peer.matched = null;
+                that.matched = null;
+            }
+        }
+        else if (that.cg.type === CompiledGrammar.END || _.isArray(grammar) || grammar.type) that.matched = true;
         else if (grammar === null) that.matched = (offset >= code.length ? true : null);
         else if (_.isString(grammar)) that.matched = (code.substr(that.offset, grammar.length) === grammar ? grammar : null);
         else if (_.isRegExp(grammar)) {
@@ -25,8 +40,10 @@ function Context(cg, offset, code, parent, previous) {
         }
 
         that.endOffset = that.offset + (_.isString(that.matched) ? that.matched.length : 0);
+        const result = (that.matched !== null);
+        // console.log("Matching " + that.dump() + " : " + (result ? "OK" : "FAIL"));
 
-        return (that.matched !== null);
+        return result;
     };
 
     that.getNextContexts = () => {
@@ -53,6 +70,10 @@ function Context(cg, offset, code, parent, previous) {
                     nextContext = new Context(nextCg, that.endOffset, code, that.parent, that);
                 }
             } else { // that.cg.type === CompiledGrammar.END
+                if(that.cg.grammar.type === "not") {
+                    console.log("Getting next for " + that.dump());
+                }
+
                 if (nextCg.type === CompiledGrammar.START) {
                     // Noeud suivant
                     nextContext = new Context(nextCg, that.endOffset, code, that.parent, that);
