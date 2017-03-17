@@ -44,4 +44,14 @@ function optmul(grammar, separator) {
     return {type: "optmul", value: grammar, separator: separator};
 }
 
-module.exports = {multiple, optional, optmul, or};
+/**
+ * Matches only if the sub grammar does not match.
+ * @param grammar
+ * @return {*}
+ */
+function not(grammar) {
+    if (arguments.length !== 1) throw new Error("Wrong arguments count.");
+    return {type: "not", value: grammar};
+}
+
+module.exports = {multiple, not, optional, optmul, or};
