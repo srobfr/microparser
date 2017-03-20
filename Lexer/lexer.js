@@ -22,6 +22,7 @@ function reportSyntaxError(code, bestOffset, expected) {
                 expected.length
                     ? "expected " + _.map(expected, function (expected) {
                         if (expected === null) return "nothing";
+                        if (expected.type === "not") return "not(" + require("util").inspect(expected.value, {colors: false}) + ")";
                         return require("util").inspect(expected, {colors: false});
                     }).join(" or ")
                     : "Grammar error : no escape case found."
@@ -71,7 +72,15 @@ function lex(cg, code) {
         let context = toVisit.pop();
 
         if (!context.match()) {
-            [bestOffset, expected] = handleExpected(context, bestOffset, expected);
+            if (context.cg.type === CompiledGrammar.END && context.cg.grammar.type === "not") {
+                let peer;
+                if (context.cg.peer === context.previous.cg) peer = context.previous;
+                else peer = context.previous.parent;
+                // Special case for the "not" grammar type.
+                [bestOffset, expected] = handleExpected(peer, peer.offset, [peer.cg.grammar]);
+            } else {
+                [bestOffset, expected] = handleExpected(context, bestOffset, expected);
+            }
             continue; // Go to next context.
         }
 
@@ -89,7 +98,7 @@ function lex(cg, code) {
 
         // Contextes suivants.
         _.eachRight(nextContexts, function (nextContext) {
-            console.log("Pushing  " + nextContext.dump());
+            // console.log("Pushing  " + nextContext.dump());
             toVisit.push(nextContext);
         });
     }

@@ -70,10 +70,6 @@ function Context(cg, offset, code, parent, previous) {
                     nextContext = new Context(nextCg, that.endOffset, code, that.parent, that);
                 }
             } else { // that.cg.type === CompiledGrammar.END
-                if(that.cg.grammar.type === "not") {
-                    console.log("Getting next for " + that.dump());
-                }
-
                 if (nextCg.type === CompiledGrammar.START) {
                     // Noeud suivant
                     nextContext = new Context(nextCg, that.endOffset, code, that.parent, that);

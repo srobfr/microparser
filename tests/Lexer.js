@@ -39,7 +39,7 @@ FooBar
             assert.equal(chain.length, 6);
         });
 
-        it.only('Not', function () {
+        it('Not', function () {
             const g = [not("a"), /^\w+/];
             const code = `foo`;
             const cg = CompiledGrammar.build(g);
@@ -48,19 +48,16 @@ FooBar
             // TODO
         });
 
-        it.only('Not (error)', function () {
-            const g = or([not("a"), /^\w+/], "afoo");
+        it('Not (error)', function () {
+            const g = [not("a"), /^\w+/];
             const code = `afoo`;
             const cg = CompiledGrammar.build(g);
             cg.check();
-            try {
-                const chain = lexer.lex(cg, code);
-                assert.fail("Should throw an error");
-            } catch (e) {
-                assert.equal(e.message, `Syntax error on line 1, column 1:
+            assert.throws(() => {
+                lexer.lex(cg, code);
+            }, (err) => err.message === `Syntax error on line 1, column 1:
 afoo
-^ expected 'TODO'`);
-            }
+^ expected not('a')`);
         });
 
         it('Too much code 2', function () {
