@@ -81,7 +81,7 @@ function optmulRemove(node) {
     return that;
 }
 
-function defaultNodeDecorator(node) {
+function decorator(node) {
     if (node.grammar.type === "multiple") {
         node.add = multipleAdd; // handles order & separators
         node.remove = multipleRemove; // handles separators
@@ -92,4 +92,7 @@ function defaultNodeDecorator(node) {
     }
 }
 
-module.exports = defaultNodeDecorator;
+module.exports = {
+    decorator: decorator,
+    getDefaultCodeFromGrammar: getDefaultCodeFromGrammar
+};

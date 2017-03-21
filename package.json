@@ -12,7 +12,9 @@
     "cheerio": "^0.22.0",
     "lodash": "^4.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/srobfr/microparser.git"

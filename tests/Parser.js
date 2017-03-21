@@ -21,4 +21,11 @@ describe('Parser', function () {
         assert.equal("foo", $root.findOne("foo").text());
         assert.equal("bar", $root.findOne("bar").text());
     });
+
+    it('Default code', function () {
+        const parser = new Parser({nodeDecorator: null});
+        const g = ["foo", "bar"];
+        const $root = parser.parse(g, null);
+        assert.equal("foobar", $root.text());
+    });
 });

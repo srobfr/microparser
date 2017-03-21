@@ -2,6 +2,7 @@ const _ = require("lodash");
 const CompiledGrammar = require(__dirname + "/CompiledGrammar.js");
 const Node = require(__dirname + "/Dom/Node.js");
 const lexer = require(__dirname + "/Lexer/lexer.js");
+const defaultLogic = require(__dirname + "/Dom/defaultLogic.js");
 
 /**
  * Parser
@@ -14,7 +15,8 @@ function Parser(options) {
 
     const defaultOptions = {
         checkGrammar: false,
-        nodeDecorator: require(__dirname + "/defaultNodeDecorator.js")
+        nodeDecorator: defaultLogic.decorator,
+        getDefaultCodeFromGrammar: defaultLogic.getDefaultCodeFromGrammar
     };
 
     _.defaultsDeep(options, defaultOptions);
@@ -63,6 +65,7 @@ function Parser(options) {
     };
 
     that.parse = function (grammar, code) {
+        if (code === undefined || code === null) code = options.getDefaultCodeFromGrammar(grammar);
         const cg = CompiledGrammar.build(grammar);
         if (options.checkGrammar) cg.check();
         const chain = lexer.lex(cg, code);

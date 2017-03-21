@@ -43,7 +43,6 @@ function reportSyntaxError(code, bestOffset, expected) {
  * @return {[int,Array.<*>]}
  */
 function handleExpected(context, bestOffset, expected) {
-    // TODO Handle not()
     if (context.offset >= bestOffset) {
         if (context.offset > bestOffset) {
             bestOffset = context.offset;
