@@ -1,4 +1,5 @@
 const _ = require("lodash");
+const Node = require(__dirname + "/Node.js");
 
 function getNodeOrderValue(node, orderItem) {
     if (_.isFunction(orderItem)) return orderItem(node);
@@ -22,6 +23,8 @@ function getDefaultCodeFromGrammar(grammar) {
     if (grammar.default !== undefined) return grammar.default;
     if (_.isString(grammar)) return grammar;
     if (_.isArray(grammar)) return grammar.map((subGrammar) => getDefaultCodeFromGrammar(subGrammar)).join("");
+    if (grammar.type === "multiple") return getDefaultCodeFromGrammar(grammar.value);
+    if (grammar.type === "optional" || grammar.type === "optmul") return "";
     throw new Error("No default code found for grammar : " + require("util").inspect(grammar, {depth: 30}));
 }
 
@@ -29,7 +32,7 @@ function multipleAdd(nodeOrCode, nextNode) {
     const that = this;
 
     // Get the node to insert
-    const node = (_.isString(nodeOrCode) ? that.parser.parse(that.grammar.value, nodeOrCode) : nodeOrCode);
+    const node = (nodeOrCode instanceof Node ? nodeOrCode : that.parser.parse(that.grammar.value, nodeOrCode));
 
     // Finding the insertion position
     if (nextNode === undefined && that.grammar.order) {
@@ -56,6 +59,8 @@ function multipleAdd(nodeOrCode, nextNode) {
         if (separator) that.append(separator);
         that.append(node);
     }
+
+    return that;
 }
 
 function multipleRemove(node) {
@@ -81,15 +86,37 @@ function optmulRemove(node) {
     return that;
 }
 
+function optionalGetOrCreateChild(code) {
+    if (!this.children.length) this.setCode(_.isString(code) ? code : getDefaultCodeFromGrammar(this.grammar.value));
+    return _.first(this.children);
+}
+
+function getIndent() {
+    let indent = "";
+    let n = this;
+    while (n) {
+        if (n.grammar.indent !== undefined) indent = n.grammar.indent + indent;
+        n = n.parent;
+    }
+    return indent;
+}
+
 function decorator(node) {
     if (node.grammar.type === "multiple") {
         node.add = multipleAdd; // handles order & separators
         node.remove = multipleRemove; // handles separators
     }
+
     if (node.grammar.type === "optmul") {
         node.add = multipleAdd; // handles order & separators
         node.remove = optmulRemove; // handles separators
     }
+
+    if (node.grammar.type === "optional") {
+        node.getOrCreateChild = optionalGetOrCreateChild;
+    }
+
+    node.getIndent = getIndent;
 }
 
 module.exports = {

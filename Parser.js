@@ -53,6 +53,9 @@ function Parser(options) {
 
             // Decorate the node for specific logic
             if (_.isFunction(options.nodeDecorator)) options.nodeDecorator(n);
+
+            // And apply the grammar-specific logic, if any.
+            if (_.isFunction(node.grammar.decorator)) node.grammar.decorator(n);
         });
 
         const result = _.first(root.children);
