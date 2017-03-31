@@ -1,7 +1,7 @@
 {
   "name": "microparser",
-  "version": "4.0.1",
-  "description": "MicroParser",
+  "version": "5.0.1",
+  "description": "Generic text parsing library.",
   "main": "microparser.js",
   "scripts": {
     "test": "mocha tests"
@@ -9,7 +9,6 @@
   "author": "Simon Robert",
   "license": "MIT",
   "dependencies": {
-    "cheerio": "^0.22.0",
     "lodash": "^4.0.0"
   },
   "devDependencies": {
