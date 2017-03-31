@@ -14,10 +14,20 @@ function Node() {
     this.children = [];
 }
 
-Node.prototype.text = function () {
-    return this.children.map(function (child) {
-        return (typeof child === "string" ? child : child.text());
-    }).join("");
+Node.prototype.text = function (text) {
+    if (text === undefined) {
+        // Reading
+        return this.children.map(function (child) {
+            return (typeof child === "string" ? child : child.text());
+        }).join("");
+    }
+
+    // Writing
+    const that = this;
+    const $newNode = that.parser.parse(this.grammar, text);
+    this.children = $newNode.children;
+    this.children.map((n) => n.parent = that);
+    return this;
 };
 
 Node.prototype.unlink = function () {
@@ -136,6 +146,11 @@ Node.prototype.findOne = function (query) {
     return result;
 };
 
+/**
+ * @deprecated
+ * @param code
+ * @return {Node}
+ */
 Node.prototype.setCode = function (code) {
     const that = this;
     const $newNode = that.parser.parse(this.grammar, code);

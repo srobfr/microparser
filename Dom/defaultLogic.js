@@ -19,11 +19,17 @@ function compareNodesOrders(node1, node2, order) {
     return r;
 }
 
-function getDefaultCodeFromGrammar(grammar) {
-    if (grammar.default !== undefined) return grammar.default;
+function getDefaultCodeFromGrammar(grammar, parentNode) {
+    if (grammar.default !== undefined) {
+        if (_.isFunction(grammar.default)) return grammar.default(parentNode);
+        return grammar.default;
+    }
+
     if (_.isString(grammar)) return grammar;
-    if (_.isArray(grammar)) return grammar.map((subGrammar) => getDefaultCodeFromGrammar(subGrammar)).join("");
-    if (grammar.type === "multiple") return getDefaultCodeFromGrammar(grammar.value);
+    if (_.isArray(grammar)) return _.map(grammar, (subGrammar, i) => {
+        return getDefaultCodeFromGrammar(subGrammar, parentNode)
+    }).join("");
+    if (grammar.type === "multiple") return getDefaultCodeFromGrammar(grammar.value, parentNode);
     if (grammar.type === "optional" || grammar.type === "optmul") return "";
     throw new Error("No default code found for grammar : " + require("util").inspect(grammar, {depth: 30}));
 }
@@ -45,7 +51,7 @@ function multipleAdd(nodeOrCode, nextNode) {
 
     // Get the separator (or null if not needed)
     const separator = (that.children.length > 0 && that.grammar.separator !== undefined
-            ? that.parser.parse(that.grammar.separator, getDefaultCodeFromGrammar(that.grammar.separator))
+            ? that.parser.parse(that.grammar.separator, getDefaultCodeFromGrammar(that.grammar.separator, that))
             : null
     );
 
@@ -87,7 +93,7 @@ function optmulRemove(node) {
 }
 
 function optionalGetOrCreateChild(code) {
-    if (!this.children.length) this.setCode(_.isString(code) ? code : getDefaultCodeFromGrammar(this.grammar.value));
+    if (!this.children.length) this.text(_.isString(code) ? code : getDefaultCodeFromGrammar(this.grammar.value, this));
     return _.first(this.children);
 }
 
