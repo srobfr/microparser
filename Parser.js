@@ -11,7 +11,11 @@ const defaultLogic = require(__dirname + "/Dom/defaultLogic.js");
  */
 function Parser(options) {
     const that = this;
-    options = options || {};
+    options = options ||
+        {
+            // Timeout on the lexer execution, in ms.
+            lexerTimeout: 5000
+        };
 
     const defaultOptions = {
         checkGrammar: false,
@@ -71,7 +75,7 @@ function Parser(options) {
         if (code === undefined || code === null) code = options.getDefaultCodeFromGrammar(grammar);
         const cg = CompiledGrammar.build(grammar);
         if (options.checkGrammar) cg.check();
-        const chain = lexer.lex(cg, code);
+        const chain = lexer.lex(cg, code, options.lexerTimeout);
         return that.buildDomFromContextsChain(chain);
     };
 }

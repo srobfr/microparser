@@ -66,7 +66,7 @@ function multipleAdd(nodeOrCode, nextNode) {
         that.append(node);
     }
 
-    return that;
+    return node;
 }
 
 function multipleRemove(node) {

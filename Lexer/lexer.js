@@ -7,8 +7,9 @@ const Context = require(__dirname + "/Context.js");
  * @param code
  * @param bestOffset
  * @param expected
+ * @param isTimeout
  */
-function reportSyntaxError(code, bestOffset, expected) {
+function throwSyntaxError(code, bestOffset, expected, isTimeout) {
     expected = _.uniq(expected);
     let lines = code.split("\n");
     let o = 0;
@@ -28,7 +29,8 @@ function reportSyntaxError(code, bestOffset, expected) {
                     : "Grammar error : no escape case found."
             );
 
-            let message = `Syntax error on line ${i + 1}, column ${lineOffset}:\n${line}\n${spaces}^ ${expectedStr}`;
+            const errorType = (isTimeout ? "Timeout" : "Syntax error");
+            let message = `${errorType} on line ${i + 1}, column ${lineOffset}:\n${line}\n${spaces}^ ${expectedStr}`;
             throw new Error(message);
         }
         o += l;
@@ -61,13 +63,20 @@ function handleExpected(context, bestOffset, expected) {
  *
  * @param cg
  * @param code
+ * @param timeout
  * @return {*}
  */
-function lex(cg, code) {
+function lex(cg, code, timeout) {
+    const timeoutTime = new Date().getTime() + timeout;
     let bestOffset = 0;
     let expected = [];
     const toVisit = [new Context(cg, 0, code, null, null)];
     while (toVisit.length > 0) {
+        if ((new Date().getTime()) > timeoutTime) {
+            // Timeout.
+            throwSyntaxError(code, bestOffset, expected, true);
+        }
+
         let context = toVisit.pop();
 
         if (!context.match()) {
@@ -89,7 +98,7 @@ function lex(cg, code) {
         if (nextContexts.length === 0) {
             if (context.endOffset < code.length) {
                 // Too much code.
-                reportSyntaxError(code, context.endOffset, (bestOffset < context.endOffset ? [null] : expected.concat([null])));
+                throwSyntaxError(code, context.endOffset, (bestOffset < context.endOffset ? [null] : expected.concat([null])));
             }
 
             return context.getChain();
@@ -103,7 +112,7 @@ function lex(cg, code) {
     }
 
     // Syntax error.
-    reportSyntaxError(code, bestOffset, expected);
+    throwSyntaxError(code, bestOffset, expected, false);
 }
 
 module.exports = {
