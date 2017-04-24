@@ -59,11 +59,15 @@ function multipleAdd(nodeOrCode, nextNode) {
     if (nextNode) {
         // Insert just before nextNode
         nextNode.before(node);
-        if (separator) nextNode.before(separator);
+        if (separator) {
+            nextNode.before(separator);
+            if (_.isFunction(separator.fix)) separator.fix();
+        }
     } else {
         // Insert in last position
         if (separator) that.append(separator);
         that.append(node);
+        if (separator && _.isFunction(separator.fix)) separator.fix();
     }
 
     return node;
