@@ -1,6 +1,6 @@
 {
   "name": "microparser",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "Generic text parsing library.",
   "main": "microparser.js",
   "scripts": {
