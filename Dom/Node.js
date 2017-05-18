@@ -22,6 +22,8 @@ Node.prototype.text = function (text) {
         }).join("");
     }
 
+    if(!_.isString(text)) throw new Error(`Non-string value given to text() : ` + require("util").inspect(text));
+
     // Writing
     const that = this;
     const $newNode = that.parser.parse(this.grammar, text);
