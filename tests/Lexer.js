@@ -1,7 +1,7 @@
 const _ = require("lodash");
 const assert = require('assert');
 const CompiledGrammar = require(__dirname + "/../CompiledGrammar.js");
-const lexer = require(__dirname + "/../Lexer/lexer.js");
+const lexer = require(__dirname + "/../lexer.js");
 const {multiple, not, optional, optmul, or} = require(__dirname + "/../grammarHelpers.js");
 
 describe('Lexer', function () {

@@ -14,24 +14,6 @@ function Node() {
     this.children = [];
 }
 
-Node.prototype.text = function (text) {
-    if (text === undefined) {
-        // Reading
-        return this.children.map(function (child) {
-            return (typeof child === "string" ? child : child.text());
-        }).join("");
-    }
-
-    if(!_.isString(text)) throw new Error(`Non-string value given to text() : ` + require("util").inspect(text));
-
-    // Writing
-    const that = this;
-    const $newNode = that.parser.parse(this.grammar, text);
-    this.children = $newNode.children;
-    this.children.map((n) => n.parent = that);
-    return this;
-};
-
 Node.prototype.unlink = function () {
     if (this.next) this.next.prev = this.prev;
     if (this.prev) this.prev.next = this.next;
@@ -107,60 +89,21 @@ Node.prototype.empty = function () {
     return this;
 };
 
-Node.prototype.findParent = function (query) {
-    if (!this.parent) return null;
-    if (this.parent.grammar === query) return this.parent;
-    return this.parent.findParent(query);
-};
-
-
-Node.prototype.find = function (query) {
-    const q = query;
-    if (!_.isFunction(query)) query = ((n) => n.grammar === q);
-
-    let results = [];
-    if (query(this)) {
-        results.push(this);
-        return results; // Optimization
+Node.prototype.text = function (text) {
+    if (text === undefined) {
+        // Reading
+        return this.children.map(function (child) {
+            return (typeof child === "string" ? child : child.text());
+        }).join("");
     }
 
-    _.each(this.children, function (node) {
-        if (_.isString(node)) return;
-        results = results.concat(node.find(query));
-    });
+    if(!_.isString(text)) throw new Error(`Non-string value given to text() : ` + require("util").inspect(text));
 
-    return results;
-};
-
-Node.prototype.findOne = function (query) {
-    const q = query;
-    if (!_.isFunction(query)) query = ((n) => n.grammar === q);
-
-    if (query(this)) return this;
-    let result = null;
-    _.each(this.children, function (node) {
-        if (_.isString(node)) return;
-        if (node.grammar === query) result = node;
-        else result = node.findOne(query);
-        if (result) return false;
-    });
-
-    return result;
-};
-
-/**
- * @deprecated
- * @param code
- * @return {Node}
- */
-Node.prototype.setCode = function (code) {
+    // Writing
     const that = this;
-    const $newNode = that.parser.parse(this.grammar, code);
+    const $newNode = that.parser.parse(this.grammar, text);
     this.children = $newNode.children;
-    this.children.map((n) => {
-        n.parent = that;
-    });
-
+    this.children.map((n) => n.parent = that);
     return this;
 };
 

@@ -4,7 +4,7 @@
   "description": "Generic text parsing library.",
   "main": "microparser.js",
   "scripts": {
-    "test": "mocha tests"
+    "test": "mocha tests/ --recursive"
   },
   "author": "Simon Robert",
   "license": "MIT",

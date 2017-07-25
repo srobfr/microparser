@@ -5,7 +5,7 @@ const {or, optional, multiple, optmul} = require(__dirname + "/../grammarHelpers
 
 describe('Parser', function () {
     it('Simple string', function () {
-        const parser = new Parser({nodeDecorator: null});
+        const parser = new Parser();
         const g = "foo";
         const code = "foo";
         const $root = parser.parse(g, code);
@@ -13,17 +13,15 @@ describe('Parser', function () {
     });
 
     it('Sequence', function () {
-        const parser = new Parser({nodeDecorator: null});
+        const parser = new Parser();
         const g = ["foo", "bar"];
         const code = "foobar";
         const $root = parser.parse(g, code);
         assert.equal("foobar", $root.text());
-        assert.equal("foo", $root.findOne("foo").text());
-        assert.equal("bar", $root.findOne("bar").text());
     });
 
     it('Default code', function () {
-        const parser = new Parser({nodeDecorator: null});
+        const parser = new Parser();
         const g = ["foo", "bar"];
         const $root = parser.parse(g, null);
         assert.equal("foobar", $root.text());

@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const CompiledGrammar = require(__dirname + "/../CompiledGrammar.js");
+const CompiledGrammar = require(__dirname + "/CompiledGrammar.js");
 const Context = require(__dirname + "/Context.js");
 
 /**

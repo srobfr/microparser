@@ -1,8 +1,10 @@
 const _ = require("lodash");
 const CompiledGrammar = require(__dirname + "/CompiledGrammar.js");
-const Node = require(__dirname + "/Dom/Node.js");
-const lexer = require(__dirname + "/Lexer/lexer.js");
-const defaultLogic = require(__dirname + "/Dom/defaultLogic.js");
+const Node = require(__dirname + "/Node.js");
+const lexer = require(__dirname + "/lexer.js");
+
+// Register the Node extensions
+require(__dirname + "/nodeExtensions/search.js");
 
 /**
  * Parser
@@ -11,19 +13,18 @@ const defaultLogic = require(__dirname + "/Dom/defaultLogic.js");
  */
 function Parser(options) {
     const that = this;
-    options = options ||
-        {
-            // Timeout on the lexer execution, in ms.
-            lexerTimeout: 5000
-        };
+    options = options || {};
 
-    const defaultOptions = {
+    /**
+     * Default options
+     */
+    _.defaultsDeep(options, {
+        // Enables some integrity checks on grammar. Disabled by default to improve perfs.
         checkGrammar: false,
-        nodeDecorator: defaultLogic.decorator,
-        getDefaultCodeFromGrammar: defaultLogic.getDefaultCodeFromGrammar
-    };
 
-    _.defaultsDeep(options, defaultOptions);
+        // Timeout on the lexer execution, in ms.
+        lexerTimeout: 5000,
+    });
 
     /**
      * Builds a pseudo-DOM from the given contexts chain
@@ -51,15 +52,10 @@ function Parser(options) {
 
             node.append(n);
             node = n;
-            if (_.isString(context.matched)) {
-                n.children.push(context.matched);
-            }
+            if (_.isString(context.matched)) n.children.push(context.matched);
 
-            // Decorate the node for specific logic
-            if (_.isFunction(options.nodeDecorator)) options.nodeDecorator(n);
-
-            // And apply the grammar-specific logic, if any.
-            if (_.isFunction(node.grammar.decorator)) node.grammar.decorator(n);
+            // Run the node building logic
+            if (_.isFunction(node.grammar.buildNode)) node.grammar.buildNode.apply(node);
         });
 
         const result = _.first(root.children);
@@ -71,8 +67,17 @@ function Parser(options) {
         return null;
     };
 
+    function getDefaultCodeFromGrammar(grammar) {
+        if (grammar.default !== undefined) return grammar.default;
+        if (_.isString(grammar)) return grammar;
+        if (_.isArray(grammar)) return _.map(grammar, getDefaultCodeFromGrammar).join("");
+        if (grammar.type === "multiple") return getDefaultCodeFromGrammar(grammar.value);
+        if (grammar.type === "optional" || grammar.type === "optmul") return "";
+        throw new Error("No default code found for grammar : " + require("util").inspect(grammar, {depth: 30}));
+    }
+
     that.parse = function (grammar, code) {
-        if (code === undefined || code === null) code = options.getDefaultCodeFromGrammar(grammar);
+        if (code === undefined || code === null) code = getDefaultCodeFromGrammar(grammar);
         const cg = CompiledGrammar.build(grammar);
         if (options.checkGrammar) cg.check();
         const chain = lexer.lex(cg, code, options.lexerTimeout);
