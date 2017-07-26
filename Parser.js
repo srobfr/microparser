@@ -5,6 +5,7 @@ const lexer = require(__dirname + "/lexer.js");
 
 // Register the Node extensions
 require(__dirname + "/nodeExtensions/search.js");
+require(__dirname + "/nodeExtensions/xml.js");
 
 /**
  * Parser

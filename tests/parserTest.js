@@ -26,4 +26,16 @@ describe('Parser', function () {
         const $root = parser.parse(g, null);
         assert.equal("foobar", $root.text());
     });
+
+    it('Node builder', function () {
+        const parser = new Parser();
+        const g = ["foo", "bar"];
+        g.buildNode = function() {
+            assert.equal(this.grammar, g);
+            this.foo = "foo";
+        };
+
+        const $root = parser.parse(g, null);
+        assert.equal("foo", $root.foo);
+    });
 });
