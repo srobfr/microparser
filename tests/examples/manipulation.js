@@ -99,5 +99,59 @@ describe('Manipulation', function () {
             assert.equal($root.text(), "function foo()");
         });
     });
+
+    describe('List', function () {
+        const w = /^[ \t\r\n]+/;
+        const ow = optional(w);
+        const ident = /^[a-z_][\w_]*/i;
+        const variable = ["$", ident];
+        variable.buildNode = function (self) {
+            /**
+             * Get/set the variable name. This is equivalent to get/set the embedded identifier text.
+             * @param {string|undefined} name
+             */
+            self.name = (name) => {
+                const $ident = this.children[1];
+                const r = $ident.text(name);
+                return (name === undefined ? r : self);
+            };
+        };
+
+        const argsSeparator = [ow, ",", ow];
+        const funcArgs = optmul(variable, argsSeparator);
+
+        const func = ["function", w, ident, "(", funcArgs, ")"];
+        func.buildNode = function (self) {
+            // TODO
+        };
+
+        it('Get all items', function () {
+            const $root = parser.parse(func, "function foo($b, $a, $c)");
+            const $args = $root.getArgs();
+            assert.equal($args.length, 3);
+        });
+        it('Find one item', function () {
+            const $root = parser.parse(func, "function foo($b, $a, $c)");
+            const $a = $root.findOneArgByName("a");
+            assert.equal($a.text(), "$a");
+        });
+        it('Find items', function () {
+            const $root = parser.parse(func, "function foo($b, $a, $c, $dd)");
+            const $args = $root.findArgsByNameLength(1);
+            assert.equal($args.length, 3);
+        });
+        it('Add item', function () {
+            const $root = parser.parse(func, "function foo()");
+            const $arg = parser.parse(variable, "$z");
+            $root.addArg($arg);
+            assert.equal($root.text(), "function foo($z)");
+        });
+        it('Delete item', function () {
+            const $root = parser.parse(func, "function foo($z)");
+            const $arg = $root.findOneArgByName("z");
+            $root.removeArg($arg);
+            assert.equal($root.text(), "function foo()");
+        });
+    });
 });
 
