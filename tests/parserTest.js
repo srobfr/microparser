@@ -27,12 +27,23 @@ describe('Parser', function () {
         assert.equal("foobar", $root.text());
     });
 
-    it('buildNode() handler', function () {
+    it('buildNode() handler (using scope)', function () {
         const parser = new Parser();
         const g = ["foo", "bar"];
         g.buildNode = function() {
             assert.equal(this.grammar, g);
             this.foo = "foo";
+        };
+
+        const $root = parser.parse(g, null);
+        assert.equal("foo", $root.foo);
+    });
+    it('buildNode() handler (using argument)', function () {
+        const parser = new Parser();
+        const g = ["foo", "bar"];
+        g.buildNode = function(node) {
+            assert.equal(this.grammar, g);
+            node.foo = "foo";
         };
 
         const $root = parser.parse(g, null);

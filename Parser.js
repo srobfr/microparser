@@ -56,7 +56,7 @@ function Parser(options) {
             if (_.isString(context.matched)) n.children.push(context.matched);
 
             // Run the node building logic
-            if (_.isFunction(node.grammar.buildNode)) node.grammar.buildNode.apply(node);
+            if (_.isFunction(node.grammar.buildNode)) node.grammar.buildNode.apply(node, [node]);
         });
 
         const result = _.first(root.children);
