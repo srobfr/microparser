@@ -27,7 +27,7 @@ describe('Parser', function () {
         assert.equal("foobar", $root.text());
     });
 
-    it('Node builder', function () {
+    it('buildNode() handler', function () {
         const parser = new Parser();
         const g = ["foo", "bar"];
         g.buildNode = function() {
