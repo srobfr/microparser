@@ -118,11 +118,27 @@ describe('Manipulation', function () {
         };
 
         const argsSeparator = [ow, ",", ow];
+        argsSeparator.default = ", ";
         const funcArgs = optmul(variable, argsSeparator);
 
         const func = ["function", w, ident, "(", funcArgs, ")"];
         func.buildNode = function (self) {
-            // TODO
+            self.getArgs = () => self.children[4].findDirectByGrammar(variable);
+            self.findOneArgByName = (name => self.children[4].findOneDirectByPredicate(
+                n => n.grammar === variable &&
+                    n.name() === name
+            ));
+            self.findArgsByNameLength = (length => self.children[4].findDirectByPredicate(
+                n => n.grammar === variable && n.name().length === length
+            ));
+            self.addArg = function($arg, $previousNode) {
+                self.children[4].insert($arg, $previousNode);
+                return self;
+            };
+            self.removeArg = function($arg) {
+                self.children[4].removeWithSeparator($arg);
+                return self;
+            };
         };
 
         it('Get all items', function () {
@@ -142,9 +158,12 @@ describe('Manipulation', function () {
         });
         it('Add item', function () {
             const $root = parser.parse(func, "function foo()");
-            const $arg = parser.parse(variable, "$z");
-            $root.addArg($arg);
+            const $zArg = parser.parse(variable, "$z");
+            $root.addArg($zArg);
             assert.equal($root.text(), "function foo($z)");
+            const $aArg = parser.parse(variable, "$a");
+            $root.addArg($aArg);
+            assert.equal($root.text(), "function foo($a, $z)");
         });
         it('Delete item', function () {
             const $root = parser.parse(func, "function foo($z)");

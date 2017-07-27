@@ -38,7 +38,9 @@ Using [yarn](https://www.npmjs.com/package/yarnpkg) :
         red
     */
 
-A call to `microparser.parse()` returns a (pseudo) DOM node, which allows you to do complex querying and manipulations.
+A call to `parser.parse()` returns a (pseudo) DOM node, which allows you to do complex querying and manipulations.
+
+See the `tests/examples` content for more complex examples.
 
 ## Author
 

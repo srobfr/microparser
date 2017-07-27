@@ -40,6 +40,44 @@ const Node = require(__dirname + "/../Node.js");
 }
 
 {
+    // Search by grammar
+
+    Node.prototype.findDirectByGrammar = function (grammar) {
+        return _.filter(this.children, (n => n.grammar === grammar));
+    };
+
+    Node.prototype.findOneDirectByGrammar = function (grammar) {
+        return _.find(this.children, (n => n.grammar === grammar));
+    };
+
+    Node.prototype.findByGrammar = function (grammar) {
+        const r = [];
+        _.each(this.children, n => {
+            if (_.isString(n)) return;
+            if (n.grammar === grammar) r.push(n);
+            r.push(n.findByGrammar(grammar));
+        });
+        return _.flattenDeep(r);
+    };
+
+    Node.prototype.findOneByGrammar = function (grammar) {
+        let r = null;
+        _.each(this.children, n => {
+            if (!n.grammar) return;
+            if (n.grammar === grammar) {
+                r = n;
+                return false;
+            }
+
+            r = n.findOneByGrammar(grammar);
+            if (r) return false;
+        });
+
+        return r;
+    };
+}
+
+{
     // Search by predicates
 
     Node.prototype.findDirectByPredicate = function (predicate) {

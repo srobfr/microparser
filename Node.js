@@ -21,7 +21,10 @@ Node.prototype.unlink = function () {
         let i = this.parent.children.indexOf(this);
         if (i >= 0) this.parent.children.splice(i, 1);
     }
+    return this;
 };
+
+Node.prototype.remove = Node.prototype.unlink;
 
 Node.prototype.append = function (node) {
     node.unlink();
@@ -32,6 +35,7 @@ Node.prototype.append = function (node) {
     }
     node.parent = this;
     this.children.push(node);
+    return this;
 };
 
 Node.prototype.prepend = function (node) {
@@ -56,6 +60,7 @@ Node.prototype.before = function (node) {
         let i = this.parent.children.indexOf(this);
         if (i >= 0) this.parent.children.splice(i, 0, node);
     }
+    return this;
 };
 
 Node.prototype.after = function (node) {
@@ -69,6 +74,7 @@ Node.prototype.after = function (node) {
         let i = this.parent.children.indexOf(this);
         if (i >= 0) this.parent.children.splice(i + 1, 0, node);
     }
+    return this;
 };
 
 Node.prototype.replaceWith = function (node) {
@@ -82,6 +88,7 @@ Node.prototype.replaceWith = function (node) {
         let i = this.parent.children.indexOf(this);
         if (i >= 0) this.parent.children[i] = node;
     }
+    return this;
 };
 
 Node.prototype.empty = function () {
