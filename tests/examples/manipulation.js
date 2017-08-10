@@ -20,7 +20,7 @@ describe('Manipulation', function () {
              * @param {string|undefined} name
              */
             self.name = (name) => {
-                const $ident = this.children[1];
+                const $ident = self.children[1];
                 const r = $ident.text(name);
                 return (name === undefined ? r : self);
             };
