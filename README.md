@@ -1,4 +1,4 @@
-# microparser [![NPM version](https://badge.fury.io/js/microparser.svg)](http://badge.fury.io/js/microparser)
+# microparser [![NPM version](https://badge.fury.io/js/microparser.svg)](http://badge.fury.io/js/microparser) [![Build Status](https://travis-ci.org/srobfr/microparser.svg?branch=master)](https://travis-ci.org/srobfr/microparser)
 
 > Generic text parsing library.
 
