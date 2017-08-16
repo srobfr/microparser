@@ -28,7 +28,10 @@ Node.prototype.insert = function ($node, $previousNode) {
 
     const self = this;
     if ($previousNode === undefined && this.grammar.order) {
-        $previousNode = _.findLast(this.children, (child => compareNodesOrders($node, child, self.grammar.order) < 0));
+        $previousNode = _.findLast(this.children, child =>
+            child.grammar !== this.grammar.separator &&
+            compareNodesOrders($node, child, self.grammar.order) < 0
+        );
     }
 
     // Build separator
