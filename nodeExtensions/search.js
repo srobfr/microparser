@@ -75,6 +75,14 @@ const Node = require(__dirname + "/../Node.js");
 
         return r;
     };
+
+    Node.prototype.findParentByGrammar = function (grammar) {
+        let node = this;
+        do {
+            node = node.parent;
+        } while (node && node.grammar !== grammar);
+        return node || null;
+    };
 }
 
 {

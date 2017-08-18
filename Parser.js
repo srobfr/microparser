@@ -8,6 +8,7 @@ require(__dirname + "/nodeExtensions/search.js");
 require(__dirname + "/nodeExtensions/xml.js");
 require(__dirname + "/nodeExtensions/insert.js");
 require(__dirname + "/nodeExtensions/removeWithSeparator.js");
+require(__dirname + "/nodeExtensions/indent.js");
 
 /**
  * Parser
