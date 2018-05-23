@@ -57,8 +57,8 @@ describe('ParseTableBuilder', function () {
             g.unshift(g);
             g.push(g); // g = [g, 'A', g];
             const parseTable = parseTableBuilder.build(g);
-            // debug(parseTable);
-            assert.equal(parseTable.transitions.size, 0);
+            debug(parseTable);
+            assert.equal(parseTable.transitions.size, 1);
             assert.equal(parseTable.reductions.size, 1);
         });
     });
@@ -103,7 +103,7 @@ describe('ParseTableBuilder', function () {
             const g = {or: ['A']};
             g.or.push(g);
             const parseTable = parseTableBuilder.build(g);
-            // debug(parseTable);
+            debug(parseTable);
             assert.equal(parseTable.firstSymbols.length, 1);
             assert.equal(parseTable.transitions.size, 0);
             assert.equal(parseTable.reductions.size, 2);
@@ -136,6 +136,19 @@ describe('ParseTableBuilder', function () {
 
             const parseTable = parseTableBuilder.build(g);
             debug(parseTable);
+        });
+
+        it('Expression', function () {
+            const numeric = /^\d+/;
+            const expr = {or: []};
+            const addition = [expr, '+', expr];
+            const multiplication = [expr, '*', expr];
+            expr.or.push(numeric, multiplication, addition, ['(', expr, ')']);
+
+            const parseTable = parseTableBuilder.build(expr);
+            debug(parseTable);
+
+            // TODO Fixer la transition ')' -> '*'
         });
     });
     // TODO
