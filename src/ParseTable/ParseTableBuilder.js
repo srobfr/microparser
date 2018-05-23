@@ -10,7 +10,7 @@ function ParseTableBuilder() {
     const that = this;
 
     /**
-     * Convert scalar values into new Object instances.
+     * Recursively convert scalar values into new Object instances.
      * @param value
      * @returns {{Object}}
      */
@@ -65,7 +65,8 @@ function ParseTableBuilder() {
 
         const transitions = new Map();
         const reductions = new Map();
-        const visited = new Map();
+        const visitsCounts = new Map();
+        const resolved = new Map();
 
         /**
          * Recursive tree walker
@@ -73,41 +74,59 @@ function ParseTableBuilder() {
          * @returns {any}
          */
         function walk(grammar) {
-            const v = visited.get(grammar);
-            if (v) return v;
+            debug({walking: grammar});
+
+            {
+                let r = resolved.get(grammar);
+                if (r) {
+                    debug({cached: grammar, r});
+                    return r;
+                }
+            }
+
             const r = {};
-            visited.set(grammar, r);
+
+            // Recursive symbol handling
+            const visitsCount = (visitsCounts.get(grammar) || 0) + 1;
+            visitsCounts.set(grammar, visitsCount);
 
             if (Array.isArray(grammar)) {
                 // Sequence
-                let prevLasts = null;
-
-                if (grammar.length > 0) {
-                    // This allows recursive grammar
-                    const {lasts} = walk(_.last(grammar));
-                    r.lasts = lasts;
+                const firstsLasts = [];
+                for(const g of grammar) {
+                    if (visitsCount > 2) continue; // Recursive case
+                    firstsLasts.push(walk(g));
                 }
 
-                for (const g of grammar) {
-                    const {firsts, lasts} = walk(g);
-                    if (!r.firsts) r.firsts = firsts;
+                r.firsts = [];
+                let prevSubLasts = [];
+                for (const firstLast of firstsLasts) {
+                    // if (!firstLast) continue;
+                    const {firsts: subFirsts, lasts: subLasts} = firstLast;
+                    if (r.firsts.length === 0) r.firsts = subFirsts;
 
-                    // Intermediate transitions
-                    if (prevLasts) prevLasts.forEach(p => {
-                        firsts.forEach(f => addToMap(transitions, p, f));
-                    });
+                    for (const prevSubLast of prevSubLasts) {
+                        for (const subFirst of subFirsts) {
+                            debug("Transition", {from: prevSubLast, to: subFirst});
+                            addToMap(transitions, prevSubLast, subFirst);
+                        }
+                    }
 
-                    prevLasts = lasts;
+                    prevSubLasts = subLasts;
                 }
+
+                r.lasts = prevSubLasts;
 
                 // Sequence reduction
-                if (grammar.length > 0) addToMap(reductions, grammar[grammar.length - 1], grammar);
+                if (grammar.length > 0) addToMap(reductions, _.last(grammar), grammar);
             } else if (grammar.or) {
                 // Or
                 r.firsts = [];
                 r.lasts = [];
                 for (const g of grammar.or) {
-                    const {firsts, lasts} = walk(g);
+                    if (visitsCount > 2) continue;
+                    const firstsLasts = walk(g);
+                    const {firsts, lasts} = firstsLasts;
                     r.firsts.push.apply(r.firsts, firsts);
                     r.lasts.push.apply(r.lasts, lasts);
 
@@ -118,11 +137,14 @@ function ParseTableBuilder() {
                 // Terminal symbol
                 r.firsts = [grammar];
                 r.lasts = [grammar];
+
             }
 
             r.firsts = _.uniq(r.firsts);
             r.lasts = _.uniq(r.lasts);
 
+            if (visitsCount === 1) resolved.set(grammar, r);
+            debug({walked: grammar, r});
             return r;
         }
 
