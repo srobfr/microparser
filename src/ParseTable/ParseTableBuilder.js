@@ -1,5 +1,4 @@
 const _ = require('lodash');
-// const debug = require('debug')('microparser:parseTableBuilder');
 const ParseTable = require('./ParseTable');
 
 /**
