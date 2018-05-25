@@ -53,13 +53,15 @@ describe('ParseTableBuilder', function () {
         });
 
         it('Start & End', function () {
-            const g = ['A'];
-            g.unshift(g);
-            g.push(g); // g = [g, 'A', g];
-            const parseTable = parseTableBuilder.build(g);
-            debug(parseTable);
-            assert.equal(parseTable.transitions.size, 1);
-            assert.equal(parseTable.reductions.size, 1);
+            assert.throws(() => {
+                const g = ['A'];
+                g.unshift(g);
+                g.push(g); // g = [g, 'A', g];
+                const parseTable = parseTableBuilder.build(g);
+                debug(parseTable);
+                assert.equal(parseTable.transitions.size, 1);
+                assert.equal(parseTable.reductions.size, 1);
+            });
         });
     });
 
@@ -89,14 +91,24 @@ describe('ParseTableBuilder', function () {
             assert.equal(parseTable.reductions.size, 5);
         });
 
+        it('No terminal', function () {
+            assert.throws(() => {
+                const g = [];
+                g.push(g);
+                parseTableBuilder.build(g);
+            });
+        });
+
         it('Recursive', function () {
-            const g = {or: []};
-            g.or.push(g);
-            const parseTable = parseTableBuilder.build(g);
-            // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 0);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 1);
+            assert.throws(() => {
+                const g = {or: []};
+                g.or.push(g);
+                const parseTable = parseTableBuilder.build(g);
+                // debug(parseTable);
+                assert.equal(parseTable.firstSymbols.length, 1);
+                assert.equal(parseTable.transitions.size, 0);
+                assert.equal(parseTable.reductions.size, 1);
+            });
         });
 
         it('Recursive start with content', function () {
@@ -118,6 +130,15 @@ describe('ParseTableBuilder', function () {
             assert.equal(parseTable.transitions.size, 0);
             assert.equal(parseTable.reductions.size, 2);
         });
+
+        it('Empty Or', function () {
+            const g = {or: []};
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            assert.equal(parseTable.firstSymbols.length, 1);
+            assert.equal(parseTable.transitions.size, 0);
+            assert.equal(parseTable.reductions.size, 1);
+        });
     });
 
     describe('Special cases', function () {
@@ -138,18 +159,42 @@ describe('ParseTableBuilder', function () {
             debug(parseTable);
         });
 
-        it('Expression', function () {
+        it('Empty sequence Start', function () {
+            const g = [[], 'B'];
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            assert.equal(parseTable.firstSymbols.length, 1);
+            assert.equal(parseTable.transitions.size, 1);
+            assert.equal(parseTable.reductions.size, 2);
+        });
+
+        it('Empty sequence Middle', function () {
+            const g = ['A', [], 'B'];
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            assert.equal(parseTable.firstSymbols.length, 1);
+            assert.equal(parseTable.transitions.size, 2);
+            assert.equal(parseTable.reductions.size, 2);
+        });
+
+        it('Empty sequence End', function () {
+            const g = ['A', 'B', []];
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            assert.equal(parseTable.firstSymbols.length, 1);
+            assert.equal(parseTable.transitions.size, 2);
+            assert.equal(parseTable.reductions.size, 2);
+        });
+
+        it('Complex expression', function () {
             const numeric = /^\d+/;
-            const expr = {or: []};
+            const expr = {or: [numeric]};
             const addition = [expr, '+', expr];
             const multiplication = [expr, '*', expr];
-            expr.or.push(numeric, multiplication, addition, ['(', expr, ')']);
+            expr.or.push(['(', expr, ')'], multiplication, addition);
 
             const parseTable = parseTableBuilder.build(expr);
-            debug(parseTable);
-
-            // TODO Fixer la transition ')' -> '*'
+            // debug(parseTable);
         });
     });
-    // TODO
 });

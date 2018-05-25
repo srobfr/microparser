@@ -1,5 +1,5 @@
 const _ = require('lodash');
-const debug = require('debug')('microparser:parseTableBuilder');
+// const debug = require('debug')('microparser:parseTableBuilder');
 const ParseTable = require('./ParseTable');
 
 /**
@@ -30,6 +30,7 @@ function ParseTableBuilder() {
                 const r = [];
                 visited.set(value, r);
                 value.forEach(v => r.push(us(v)));
+                if (value.length === 0) r.push(us(''));
                 return r;
             }
 
@@ -37,6 +38,7 @@ function ParseTableBuilder() {
                 const r = {or: []};
                 visited.set(value, r);
                 value.or.forEach(v => r.or.push(us(v)));
+                if (value.or.length === 0) r.or.push(us(''));
                 return r;
             }
 
@@ -46,14 +48,140 @@ function ParseTableBuilder() {
         return us(value);
     }
 
-    function addToMap(map, ...args) {
-        let m = map;
+    function addToTree(tree, ...args) {
+        let t = tree;
         for (let i = 0, l = args.length; i < l; i++) {
             const a = args[i];
-            const nm = m.get(a) || (i === l - 1 ? true : new Map());
-            m.set(a, nm);
-            m = nm;
+            if (i === (l - 1)) {
+                // Here t should be a Set
+                t.add(a);
+            } else {
+                // t is a Map
+                const nt = t.get(a) || (i === l - 2 ? new Set() : new Map());
+                t.set(a, nt);
+                t = nt;
+            }
         }
+    }
+
+    function computeFirstAndLastTerminalsBySymbols(topSymbol) {
+        const resolversBySymbol = new Map();
+        const resolved = new Map();
+
+        /**
+         * Recursive tree walker
+         * @param grammar
+         * @param visited
+         * @returns {any}
+         */
+        function setupResolvers(grammar, visited) {
+            visited = visited || new Set();
+
+            // Leafs-to-root walk
+            if (visited.has(grammar)) return;
+            visited.add(grammar);
+
+            if (Array.isArray(grammar)) {
+                // Sequence
+                for (const g of grammar) {
+                    setupResolvers(g, visited);
+                }
+
+                if (grammar.length > 0) {
+                    const gf = _.first(grammar);
+                    addToTree(resolversBySymbol, gf, () => {
+                        if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
+                        const r = resolved.get(grammar);
+                        if (r.firsts !== resolved.get(gf).firsts) {
+                            r.firsts = resolved.get(gf).firsts;
+                            (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
+                        }
+                    });
+                    const gl = _.last(grammar);
+                    addToTree(resolversBySymbol, gl, () => {
+                        if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
+                        const r = resolved.get(grammar);
+                        if (r.lasts !== resolved.get(gl).lasts) {
+                            r.lasts = resolved.get(gl).lasts;
+                            (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
+                        }
+                    });
+                }
+            } else if (grammar.or) {
+                // Or
+                for (const g of grammar.or) {
+                    setupResolvers(g, visited);
+                    addToTree(resolversBySymbol, g, () => {
+                        if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
+                        const gr = resolved.get(g);
+                        const r = resolved.get(grammar);
+                        const prevCount = r.firsts.size + r.lasts.size;
+                        for (const gf of gr.firsts) r.firsts.add(gf);
+                        for (const gl of gr.lasts) r.lasts.add(gl);
+                        if (r.firsts.size + r.lasts.size !== prevCount) {
+                            (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
+                        }
+                    });
+                }
+            } else {
+                addToTree(resolversBySymbol, null, () => {
+                    resolved.set(grammar, {firsts: new Set([grammar]), lasts: new Set([grammar])});
+                    (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
+                });
+            }
+        }
+
+        setupResolvers(topSymbol);
+        // Here we have the leaf->root dependancies map.
+
+        // Resolve the terminals
+        (resolversBySymbol.get(null) || []).forEach(resolver => resolver());
+
+        return resolved;
+    }
+
+    function computeTransitionsAndReductions(topSymbol, firstsLastsBySymbol) {
+        const transitions = new Map();
+        const reductions = new Map();
+
+        function walk(grammar, visited) {
+            visited = visited || new Set();
+
+            if (visited.has(grammar)) return;
+            visited.add(grammar);
+
+            if (Array.isArray(grammar)) {
+                // Sequence
+                let prevLasts = new Set();
+                for (const g of grammar) {
+                    walk(g, visited);
+                    const {firsts: subFirsts, lasts: subLasts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
+                    for (const l of prevLasts) {
+                        for (const f of subFirsts) {
+                            // Transitions
+                            addToTree(transitions, l, f);
+                        }
+                    }
+                    prevLasts = subLasts;
+                }
+
+                // Reductions
+                if (grammar.length > 0) addToTree(reductions, _.last(grammar), grammar);
+            } else if (grammar.or) {
+                // Or
+                for (const g of grammar.or) {
+                    walk(g, visited);
+                    // Reductions
+                    addToTree(reductions, g, grammar);
+                }
+            } else {
+                // Terminal
+            }
+        }
+
+        walk(topSymbol);
+
+        return {transitions, reductions};
     }
 
     /**
@@ -61,107 +189,20 @@ function ParseTableBuilder() {
      * @param grammar
      */
     that.build = function (grammar) {
-        debug("Building ParseTable from :", grammar);
+        const topSymbol = unscalarize(grammar);
 
-        const transitions = new Map();
-        const reductions = new Map();
-        const visited = new Map();
-        const resolved = new Map();
-
-        /**
-         * Recursive tree walker
-         * @param grammar
-         * @returns {any}
-         */
-        function walk(grammar) {
-            {
-                // Optimization : skip already resolved symbols.
-                let r = resolved.get(grammar);
-                if (r) {
-                    debug({cached: grammar, r});
-                    return r;
-                }
-            }
-
-            const r = {
-                firsts: new Set(),
-                lasts: new Set(),
-            };
-            visited.set(grammar, r);
-
-            if (Array.isArray(grammar)) {
-                // Sequence
-                if (grammar.length === 0) throw new Error("Empty sequence");
-
-                {// First, try to define firsts and lasts terminals for this sequence.
-                    for (const g of grammar) {
-                        const {firsts: subFirsts} = visited.get(g) || walk(g);
-                        if (subFirsts.size > 0) {
-                            r.firsts = subFirsts;
-                            break;
-                        }
-                    }
-
-                    for (let i = grammar.length - 1; i >= 0; i--) {
-                        const g = grammar[i];
-                        const {lasts: subLasts} = visited.get(g) || walk(g);
-                        if (subLasts.size > 0) {
-                            r.lasts = subLasts;
-                            break;
-                        }
-                    }
-                }
-
-                // Then, walk every sub nodes
-                const firstsLasts = [];
-                for (const g of grammar) {
-                    firstsLasts.push(visited.get(g) || walk(g));
-                }
-
-                // Handle transitions
-                let prevSubLasts = [];
-                for (const firstLast of firstsLasts) {
-                    const {firsts: subFirsts, lasts: subLasts} = firstLast;
-                    for (const prevSubLast of prevSubLasts) {
-                        for (const subFirst of subFirsts) {
-                            debug("Transition", {from: prevSubLast, to: subFirst});
-                            addToMap(transitions, prevSubLast, subFirst);
-                        }
-                    }
-
-                    prevSubLasts = subLasts;
-                }
-
-                // Sequence reduction
-                if (grammar.length > 0) addToMap(reductions, _.last(grammar), grammar);
-            } else if (grammar.or) {
-                // Or
-                r.firsts = new Set();
-                r.lasts = new Set();
-                for (const g of grammar.or) {
-                    const firstsLasts = visited.get(g) || walk(g);
-                    const {firsts, lasts} = firstsLasts;
-                    for (const f of firsts) r.firsts.add(f);
-                    for (const l of lasts) r.lasts.add(l);
-
-                    // Reduction
-                    addToMap(reductions, g, grammar);
-                }
-            } else {
-                // Terminal symbol
-                r.firsts = new Set([grammar]);
-                r.lasts = new Set([grammar]);
-            }
-
-            resolved.set(grammar, r);
-            return r;
+        // First, compute the first & last terminals of each symbol.
+        const firstsLastsBySymbol = computeFirstAndLastTerminalsBySymbols(topSymbol);
+        if (!firstsLastsBySymbol.has(topSymbol)) {
+            // Buggy grammar. For example, it contains no terminal or an infinite recursion as first symbol.
+            throw new Error("Wrong grammar (no reachable terminal symbol ?)");
         }
 
-        const topSymbol = unscalarize(grammar);
-        const {firsts} = walk(topSymbol);
+        // Then, compute transitions & reductions
+        const {transitions, reductions} = computeTransitionsAndReductions(topSymbol, firstsLastsBySymbol);
 
         const parseTable = new ParseTable();
-        parseTable.firstSymbols = Array.from(firsts);
+        parseTable.firstSymbols = Array.from(firstsLastsBySymbol.get(topSymbol).firsts);
         parseTable.topSymbol = topSymbol;
         parseTable.transitions = transitions;
         parseTable.reductions = reductions;
