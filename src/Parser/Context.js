@@ -27,7 +27,8 @@ function Context() {
      * The previous context.
      * @type {Context|null}
      */
-    that.previousContext = null;
+    // that.previousContext = null;
+    Object.defineProperty(that, 'previousContext', {value: null, enumerable: false, writable: true}); // TODO Dev
 
     /**
      * The symbol.
