@@ -35,6 +35,13 @@ function Context() {
      * @type {any}
      */
     that.symbol;
+
+    /**
+     * The evaluation callback.
+     * @type {Function}
+     */
+    // that.evaluate;
+    Object.defineProperty(that, 'evaluate', {value: null, enumerable: false, writable: true}); // TODO Dev
 }
 
 module.exports = Context;

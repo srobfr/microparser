@@ -20,13 +20,27 @@ describe('Parser', function () {
         debug(result);
     });
 
-    it('Addition', function () {
-        const v = /^\d+/;
-        const expr = {or: [v]};
-        const sum = [expr, '+', expr];
-        expr.or.push(sum);
+    const v = /^\d+/;
+    const expr = {or: [v]};
+    const sum = [expr, '+', expr];
+    expr.or.push(sum);
 
-        const result = parser.parse(expr, '1+2+3+4+5+6+7+8');
+    it('Too short', function () {
+        assert.throws(() => {
+            const result = parser.parse(expr, '1+');
+            debug(result);
+        }, /Syntax error on line 1, column 3:/);
+    });
+
+    it('Too long', function () {
+        assert.throws(() => {
+            const result = parser.parse(['A', 'B'], 'ABC');
+            debug(result);
+        }, /Syntax error on line 1, column 3:/);
+    });
+
+    it('Addition', function () {
+        const result = parser.parse(expr, '1+2');
         debug(result);
     });
 });

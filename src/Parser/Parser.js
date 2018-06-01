@@ -11,6 +11,41 @@ function Parser() {
     const parseTableBuilder = new ParseTableBuilder();
 
     /**
+     * Throws a syntax error based on the expected symbols & offset
+     * @param code
+     * @param expectedOffset
+     * @param expected
+     */
+    function throwSyntaxError(code, expectedOffset, expected) {
+        expected = Array.from(expected).map(s => s && s.valueOf ? s.valueOf() : s);
+
+        debug({code, bestOffset: expectedOffset, expected});
+        let lines = code.split("\n");
+        let o = 0;
+        lines.forEach(function (line, i) {
+            let l = line.length;
+            if (o + i <= expectedOffset && expectedOffset <= o + i + l) {
+                let lineOffset = expectedOffset - (o + i) + 1;
+                let spaces = new Array(lineOffset).join(" ");
+
+                let expectedStr = (
+                    expected.length
+                        ? "expected " + expected.map(function (expected) {
+                        if (expected === null) return "EOF";
+                        if (expected.type === "not") return "not(" + require("util").inspect(expected.value, {colors: false}) + ")";
+                        return require("util").inspect(expected, {colors: false});
+                    }).join(" or ")
+                        : "Grammar error."
+                );
+
+                let message = `Syntax error on line ${i + 1}, column ${lineOffset}:\n${line}\n${spaces}^ ${expectedStr}`;
+                throw new Error(message);
+            }
+            o += l;
+        });
+    }
+
+    /**
      * TODO Optimiser ?
      * @param code
      * @param offset
@@ -63,21 +98,27 @@ function Parser() {
      * @param reduction
      * @returns {Context|null}
      */
-    function findFirstContextOfReduction(context, reduction) {
+    function tryToReduce(context, reduction) {
         let c = context;
+        const matchedCodes = [];
         let firstContext = context;
         if (Array.isArray(reduction)) {
             for (let i = reduction.length - 1; i >= 0; i--) {
                 if (!c || c.symbol !== reduction[i]) {
                     debug({subReductionFailed: reduction[i], c});
-                    return false;
+                    return null;
                 }
+
+                matchedCodes.unshift(c.matchedCode);
                 firstContext = c;
                 c = c.previousContext;
             }
+        } else {
+            matchedCodes.unshift(c.matchedCode);
         }
 
-        return firstContext;
+        if (firstContext === null) return null;
+        return {firstContext: firstContext, matchedCode: matchedCodes.join('')};
     }
 
     /**
@@ -89,6 +130,18 @@ function Parser() {
     that.parse = function (grammar, code) {
         const parseTable = parseTableBuilder.build(grammar);
         debug({parseTable});
+
+        let expected = new Set();
+        let expectedOffset = 0;
+
+        function onFail(context) {
+            if (expectedOffset < context.offset) {
+                expectedOffset = context.offset;
+                expected = new Set([context.symbol]);
+            } else if (expectedOffset === context.offset) {
+                expected.add(context.symbol);
+            }
+        }
 
         // Initialize first contexts
         const contextToMatch = new Set(parseTable.firstSymbols.map(symbol => {
@@ -113,8 +166,8 @@ function Parser() {
                     contextsToProcess.add(context);
                 } else {
                     // The context dit not match the code.
+                    onFail(context);
                     debug({matchFailed: context});
-                    // TODO Handle syntax errors
                 }
             }
 
@@ -127,15 +180,21 @@ function Parser() {
                     // Reduction
                     let reductions = parseTable.reductions.get(context.symbol) || new Set();
                     for (const reduction of reductions) {
-                        const firstContextOfReduction = findFirstContextOfReduction(context, reduction);
-                        if (!firstContextOfReduction) {
+                        const reductionTestResult = tryToReduce(context, reduction);
+                        if (!reductionTestResult) {
                             // debug({reductionFailed: reduction});
                             continue;
                         }
 
+                        const {
+                            firstContext: firstContextOfReduction,
+                            matchedCode: matchedCode
+                        } = reductionTestResult;
+
                         // TODO Prendre en compte la stack pour filtrer les réductions possibles
                         const reducedContext = new Context();
                         reducedContext.code = code;
+                        reducedContext.matchedCode = matchedCode;
                         reducedContext.symbol = reduction;
                         reducedContext.offset = firstContextOfReduction.offset;
                         reducedContext.previousContext = firstContextOfReduction.previousContext;
@@ -165,8 +224,22 @@ function Parser() {
             }
         }
 
-        // TODO Choose the best final context.
-        debug({finalContexts});
+        // Filter final contexts
+        for (const context of finalContexts) {
+            if (context.matchedCode.length < code.length) {
+                // There is remaining code.
+                const eofContext = new Context();
+                eofContext.code = context.code;
+                eofContext.offset = context.matchedCode.length;
+                eofContext.symbol = null; // EOF
+                eofContext.previousContext = context;
+                onFail(eofContext);
+                finalContexts.delete(context);
+            }
+        }
+
+        debug({finalContexts, expected: expected, expectedOffset: expectedOffset});
+        if (finalContexts.size === 0) throwSyntaxError(code, expectedOffset, expected);
     };
 }
 
