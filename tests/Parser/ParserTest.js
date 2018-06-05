@@ -20,27 +20,46 @@ describe('Parser', function () {
         debug(result);
     });
 
-    const v = /^\d+/;
-    const expr = {or: [v]};
-    const sum = [expr, '+', expr];
-    expr.or.push(sum);
+    describe('Simple Expression', function () {
+        const v = /^\d+/;
+        const expr = {or: [v]};
+        const sum = [expr, '+', expr];
+        expr.or.push(sum);
 
-    it('Too short', function () {
-        assert.throws(() => {
-            const result = parser.parse(expr, '1+');
+        it('Too short', function () {
+            assert.throws(() => {
+                const result = parser.parse(expr, '1+');
+                debug(result);
+            }, /Syntax error on line 1, column 3:/);
+        });
+
+        it('Too long', function () {
+            assert.throws(() => {
+                const result = parser.parse(['A', 'B'], 'ABC');
+                debug(result);
+            }, /Syntax error on line 1, column 3:/);
+        });
+
+        it('Addition', function () {
+            const result = parser.parse(expr, '1+2');
             debug(result);
-        }, /Syntax error on line 1, column 3:/);
+        });
     });
 
-    it('Too long', function () {
-        assert.throws(() => {
-            const result = parser.parse(['A', 'B'], 'ABC');
-            debug(result);
-        }, /Syntax error on line 1, column 3:/);
-    });
+    describe('Ambiguous grammar', function () {
+        const v = /^\d+/;
+        const expr = {or: [v]};
+        const mult = [expr, '*', expr];
+        const sum = [expr, '+', expr];
+        expr.or.push(mult, sum);
 
-    it('Addition', function () {
-        const result = parser.parse(expr, '1+2');
-        debug(result);
+        it('Right to left', function () {
+            const result = parser.parse(expr, '1+2*3');
+            debug(result);
+        });
+        it.only('Left to right', function () {
+            const result = parser.parse(expr, '1*2+3+4+5*6');
+            debug(result);
+        });
     });
 });

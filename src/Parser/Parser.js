@@ -98,27 +98,45 @@ function Parser() {
      * @param reduction
      * @returns {Context|null}
      */
-    function tryToReduce(context, reduction) {
+    function reduceContext(context, reduction) {
         let c = context;
         const matchedCodes = [];
         let firstContext = context;
+        let evaluate;
         if (Array.isArray(reduction)) {
+            const subContexts = [];
             for (let i = reduction.length - 1; i >= 0; i--) {
                 if (!c || c.symbol !== reduction[i]) {
-                    debug({subReductionFailed: reduction[i], c});
+                    // debug({subReductionFailed: reduction[i], c});
                     return null;
                 }
-
+                subContexts.unshift(c);
                 matchedCodes.unshift(c.matchedCode);
                 firstContext = c;
                 c = c.previousContext;
             }
+
+            evaluate = () => {
+                return subContexts.map(context => context.evaluate()); // TODO
+            };
         } else {
-            matchedCodes.unshift(c.matchedCode);
+            matchedCodes.push(c.matchedCode);
+            evaluate = () => {
+                return [context.evaluate()]; // TODO
+            };
         }
 
         if (firstContext === null) return null;
-        return {firstContext: firstContext, matchedCode: matchedCodes.join('')};
+
+        const reducedContext = new Context();
+        reducedContext.code = context.code;
+        reducedContext.symbol = reduction;
+        reducedContext.matchedCode = matchedCodes.join('');
+        reducedContext.offset = firstContext.offset;
+        reducedContext.previousContext = firstContext.previousContext;
+        reducedContext.evaluate = evaluate;
+
+        return reducedContext;
     }
 
     /**
@@ -151,10 +169,12 @@ function Parser() {
             return context;
         }));
 
-        const contextsToProcess = new Set();
+        let contextsToReduce = new Set();
         const finalContexts = new Set();
 
-        while (contextToMatch.size > 0 || contextsToProcess.size > 0) {
+        while (contextToMatch.size > 0 || contextsToReduce.size > 0) {
+            debug({toMatch: contextToMatch.size, toReduce: contextsToReduce.size});
+
             // Match terminal contexts
             for (const context of contextToMatch) {
                 matchContext(context);
@@ -162,47 +182,39 @@ function Parser() {
 
                 if (context.matchedCode !== null) {
                     // The context matched the code.
-                    debug({matched: context});
-                    contextsToProcess.add(context);
+                    // debug({matched: context});
+                    contextsToReduce.add(context);
+                    context.evaluate = () => {
+                        return [context.matchedCode]; // TODO
+                    }
                 } else {
                     // The context dit not match the code.
                     onFail(context);
-                    debug({matchFailed: context});
+                    // debug({matchFailed: context});
                 }
             }
 
             // Process contexts
-            for (const context of contextsToProcess) {
-                contextsToProcess.delete(context);
+            const nextContextsToReduce = new Set();
+            for (const context of contextsToReduce) {
+                contextsToReduce.delete(context);
                 const previousContexts = new Set([context]);
 
                 {
                     // Reduction
                     let reductions = parseTable.reductions.get(context.symbol) || new Set();
                     for (const reduction of reductions) {
-                        const reductionTestResult = tryToReduce(context, reduction);
-                        if (!reductionTestResult) {
+                        const reducedContext = reduceContext(context, reduction);
+                        if (!reducedContext) {
                             // debug({reductionFailed: reduction});
                             continue;
                         }
 
-                        const {
-                            firstContext: firstContextOfReduction,
-                            matchedCode: matchedCode
-                        } = reductionTestResult;
-
-                        // TODO Prendre en compte la stack pour filtrer les réductions possibles
-                        const reducedContext = new Context();
-                        reducedContext.code = code;
-                        reducedContext.matchedCode = matchedCode;
-                        reducedContext.symbol = reduction;
-                        reducedContext.offset = firstContextOfReduction.offset;
-                        reducedContext.previousContext = firstContextOfReduction.previousContext;
-                        debug({reduced: reducedContext});
-                        contextsToProcess.add(reducedContext);
+                        // debug({reduced: reducedContext});
+                        nextContextsToReduce.add(reducedContext);
                         previousContexts.add(reducedContext);
 
-                        if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol /* TODO Check the total matched length ? */) {
+                        if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
                             finalContexts.add(reducedContext);
                         }
                     }
@@ -222,6 +234,8 @@ function Parser() {
                     }
                 }
             }
+
+            contextsToReduce = nextContextsToReduce;
         }
 
         // Filter final contexts
@@ -235,11 +249,18 @@ function Parser() {
                 eofContext.previousContext = context;
                 onFail(eofContext);
                 finalContexts.delete(context);
+                continue;
             }
+
+            // TODO Choisir le meilleur contexte
+            const evaluation = context.evaluate();
+            debug({evaluation});
         }
 
-        debug({finalContexts, expected: expected, expectedOffset: expectedOffset});
+        // debug({finalContexts, expected: expected, expectedOffset: expectedOffset});
         if (finalContexts.size === 0) throwSyntaxError(code, expectedOffset, expected);
+
+        // return finalContext.evaluate();
     };
 }
 
