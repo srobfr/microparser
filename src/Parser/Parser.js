@@ -195,7 +195,6 @@ function Parser() {
             }
 
             // Process contexts
-            const nextContextsToReduce = new Set();
             for (const context of contextsToReduce) {
                 contextsToReduce.delete(context);
                 const previousContexts = new Set([context]);
@@ -211,7 +210,7 @@ function Parser() {
                         }
 
                         // debug({reduced: reducedContext});
-                        nextContextsToReduce.add(reducedContext);
+                        contextsToReduce.add(reducedContext);
                         previousContexts.add(reducedContext);
 
                         if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
@@ -234,8 +233,6 @@ function Parser() {
                     }
                 }
             }
-
-            contextsToReduce = nextContextsToReduce;
         }
 
         // Filter final contexts
