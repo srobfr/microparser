@@ -162,7 +162,7 @@ function Parser() {
         }
 
         // Initialize first contexts
-        const contextToMatch = new Set(parseTable.firstSymbols.map(symbol => {
+        let contextsToMatch = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
             context.symbol = symbol;
             context.code = code;
@@ -172,14 +172,12 @@ function Parser() {
         let contextsToReduce = new Set();
         const finalContexts = new Set();
 
-        while (contextToMatch.size > 0 || contextsToReduce.size > 0) {
-            debug({toMatch: contextToMatch.size, toReduce: contextsToReduce.size});
+        while (contextsToMatch.size > 0 || contextsToReduce.size > 0) {
+            debug({toMatch: contextsToMatch.size, toReduce: contextsToReduce.size});
 
             // Match terminal contexts
-            for (const context of contextToMatch) {
+            for (const context of contextsToMatch) {
                 matchContext(context);
-                contextToMatch.delete(context);
-
                 if (context.matchedCode !== null) {
                     // The context matched the code.
                     // debug({matched: context});
@@ -194,9 +192,11 @@ function Parser() {
                 }
             }
 
+            contextsToMatch = new Set();
+
             // Process contexts
+            const nextContextsToReduce = new Set();
             for (const context of contextsToReduce) {
-                contextsToReduce.delete(context);
                 const previousContexts = new Set([context]);
 
                 {
@@ -204,13 +204,10 @@ function Parser() {
                     let reductions = parseTable.reductions.get(context.symbol) || new Set();
                     for (const reduction of reductions) {
                         const reducedContext = reduceContext(context, reduction);
-                        if (!reducedContext) {
-                            // debug({reductionFailed: reduction});
-                            continue;
-                        }
+                        if (!reducedContext) continue;
 
                         // debug({reduced: reducedContext});
-                        contextsToReduce.add(reducedContext);
+                        nextContextsToReduce.add(reducedContext);
                         previousContexts.add(reducedContext);
 
                         if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
@@ -226,13 +223,17 @@ function Parser() {
                             const nextContexts = computeNextContexts(context, parseTable);
                             for (const c of nextContexts) {
                                 c.previousContext = previousContext;
-                                contextToMatch.add(c);
-                                // debug({toMatch: c});
+                                contextsToMatch.add(c);
                             }
                         }
                     }
                 }
             }
+
+            contextsToReduce = nextContextsToReduce;
+
+            // TODO On filtre les contextes :
+
         }
 
         // Filter final contexts
