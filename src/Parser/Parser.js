@@ -1,6 +1,7 @@
 const Context = require('./Context');
 const ParseTableBuilder = require('../ParseTable/ParseTableBuilder');
 const debug = require('debug')('microparser:parser');
+const {treeAdd, treeHas} = require('../utils/tree');
 
 /**
  * The Parser
@@ -173,9 +174,8 @@ function Parser() {
         const finalContexts = new Set();
 
         while (contextsToMatch.size > 0 || contextsToReduce.size > 0) {
-            debug({toMatch: contextsToMatch.size, toReduce: contextsToReduce.size});
-
             // Match terminal contexts
+            debug({toMatch: contextsToMatch});
             for (const context of contextsToMatch) {
                 matchContext(context);
                 if (context.matchedCode !== null) {
@@ -194,47 +194,53 @@ function Parser() {
 
             contextsToMatch = new Set();
 
-            // Process contexts
-            const nextContextsToReduce = new Set();
-            for (const context of contextsToReduce) {
-                const previousContexts = new Set([context]);
+            {
+                // Process contexts
+                const nextContextsToReduce = new Set();
+                const contextsDedupMap = new Map();
 
-                {
-                    // Reduction
-                    let reductions = parseTable.reductions.get(context.symbol) || new Set();
-                    for (const reduction of reductions) {
-                        const reducedContext = reduceContext(context, reduction);
-                        if (!reducedContext) continue;
+                debug({toReduce: contextsToReduce});
+                for (const context of contextsToReduce) {
+                    if (treeHas(contextsDedupMap, context.symbol, context.offset, context.matchedCode)) continue;
+                    treeAdd(contextsDedupMap, context.symbol, context.offset, context.matchedCode);
 
-                        // debug({reduced: reducedContext});
-                        nextContextsToReduce.add(reducedContext);
-                        previousContexts.add(reducedContext);
+                    const previousContexts = new Set();
 
-                        if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
-                            finalContexts.add(reducedContext);
+                    {
+                        // Reduction
+                        let reductions = parseTable.reductions.get(context.symbol) || new Set();
+                        for (const reduction of reductions) {
+                            const reducedContext = reduceContext(context, reduction);
+                            if (!reducedContext) continue;
+
+                            // debug({reduced: reducedContext});
+                            nextContextsToReduce.add(reducedContext);
+                            previousContexts.add(reducedContext);
+
+                            if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
+                                finalContexts.add(reducedContext);
+                            }
                         }
                     }
-                }
 
-                {
-                    // If the context is a terminal, find next terminal contexts to match
-                    if (isTerminal(context)) {
-                        for (const previousContext of previousContexts) {
-                            const nextContexts = computeNextContexts(context, parseTable);
-                            for (const c of nextContexts) {
-                                c.previousContext = previousContext;
-                                contextsToMatch.add(c);
+                    {
+                        // If the context is a terminal, find next terminal contexts to match
+                        if (isTerminal(context)) {
+                            for (const previousContext of previousContexts) {
+                                const nextContexts = computeNextContexts(context, parseTable);
+                                for (const c of nextContexts) {
+                                    c.previousContext = previousContext;
+                                    contextsToMatch.add(c);
+                                }
                             }
                         }
                     }
                 }
+                contextsToReduce = nextContextsToReduce;
             }
-
-            contextsToReduce = nextContextsToReduce;
-
-            // TODO On filtre les contextes :
-
         }
+
+        debug({finalContexts});
 
         // Filter final contexts
         for (const context of finalContexts) {
