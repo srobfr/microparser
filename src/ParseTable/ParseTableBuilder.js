@@ -30,6 +30,7 @@ function ParseTableBuilder() {
                 visited.set(value, r);
                 value.forEach(v => r.push(us(v)));
                 if (value.length === 0) r.push(us(''));
+                if (value.tag) r.tag = value.tag;
                 return r;
             }
 
@@ -38,6 +39,7 @@ function ParseTableBuilder() {
                 visited.set(value, r);
                 value.or.forEach(v => r.or.push(us(v)));
                 if (value.or.length === 0) r.or.push(us(''));
+                if (value.tag) r.tag = value.tag;
                 return r;
             }
 

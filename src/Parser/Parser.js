@@ -117,12 +117,14 @@ function Parser() {
             }
 
             evaluate = () => {
+                if (context.symbol.tag) return `<${reduction.tag}>${subContexts.map(context => context.evaluate()).join('')}</${reduction.tag}>`;
                 return subContexts.map(context => context.evaluate()); // TODO
             };
         } else {
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
-                return [context.evaluate()]; // TODO
+                if (reduction.tag) return `<${reduction.tag}>${context.evaluate()}</${reduction.tag}>`;
+                return context.evaluate(); // TODO
             };
         }
 
@@ -173,18 +175,19 @@ function Parser() {
         const finalContexts = new Set();
 
         while (contextsToMatch.size > 0 || contextsToReduce.size > 0) {
-            debug({toMatch: contextsToMatch.size, toReduce: contextsToReduce.size});
+            debug({toMatch: contextsToMatch.size});
 
             // Match terminal contexts
             for (const context of contextsToMatch) {
                 matchContext(context);
                 if (context.matchedCode !== null) {
                     // The context matched the code.
-                    // debug({matched: context});
                     contextsToReduce.add(context);
                     context.evaluate = () => {
-                        return [context.matchedCode]; // TODO
-                    }
+                        if (context.symbol.tag) return `<${context.symbol.tag}>${context.matchedCode}</${context.symbol.tag}>`;
+                        return context.matchedCode; // TODO
+                    };
+                    debug({matched: context.evaluate()});
                 } else {
                     // The context dit not match the code.
                     onFail(context);
@@ -194,8 +197,9 @@ function Parser() {
 
             contextsToMatch = new Set();
 
+            debug({toReduce: contextsToReduce.size});
+
             // Process contexts
-            const nextContextsToReduce = new Set();
             for (const context of contextsToReduce) {
                 const previousContexts = new Set([context]);
 
@@ -206,8 +210,8 @@ function Parser() {
                         const reducedContext = reduceContext(context, reduction);
                         if (!reducedContext) continue;
 
-                        // debug({reduced: reducedContext});
-                        nextContextsToReduce.add(reducedContext);
+                        debug({reduced: reducedContext.evaluate()});
+                        contextsToReduce.add(reducedContext);
                         previousContexts.add(reducedContext);
 
                         if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
@@ -229,11 +233,6 @@ function Parser() {
                     }
                 }
             }
-
-            contextsToReduce = nextContextsToReduce;
-
-            // TODO On filtre les contextes :
-
         }
 
         // Filter final contexts

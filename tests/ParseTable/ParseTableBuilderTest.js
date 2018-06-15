@@ -19,11 +19,11 @@ describe('ParseTableBuilder', function () {
     });
 
     describe('Sequence', function () {
-        it('Start recursion', function () {
+        it.only('Start recursion', function () {
             const g = ['A'];
             g.unshift(g); // g = [g, 'A'];
             const parseTable = parseTableBuilder.build(g);
-            // debug(parseTable);
+            debug(parseTable);
             assert.equal(parseTable.transitions.size, 1);
             const transitions = parseTable.transitions.values().next().value;
             assert.equal(transitions.size, 1);

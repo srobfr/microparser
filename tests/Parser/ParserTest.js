@@ -47,19 +47,31 @@ describe('Parser', function () {
     });
 
     describe('Ambiguous grammar', function () {
-        const v = /^\d+/;
-        const expr = {or: [v]};
+        const numeric = /^\d+/;
+        numeric.tag = 'numeric';
+        const expr = {or: [numeric]};
+        expr.tag = 'expr';
         const mult = [expr, '*', expr];
+        mult.tag = 'mult';
         const sum = [expr, '+', expr];
+        sum.tag = 'sum';
         expr.or.push(mult, sum);
 
         it('Right to left', function () {
             const result = parser.parse(expr, '1+2*3');
             debug(result);
         });
-        it.only('Left to right', function () {
-            const result = parser.parse(expr, '1*2+3+4+5*6');
+        it('Left to right', function () {
+            const result = parser.parse(expr, '1*2+3');
             debug(result);
         });
+    });
+
+    it('WIP', function () {
+        const A = ['A'];
+        A.tag = 'a';
+
+        const result = parser.parse(A, 'A');
+        debug(result);
     });
 });
