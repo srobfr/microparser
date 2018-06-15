@@ -6,16 +6,10 @@ function ParseTable() {
     const that = this;
 
     /**
-     * A map of possible symbols transitions.
+     * A map of possible symbols transitions (shift, reduce, or finish).
      * @type {Map<any, any>}
      */
-    that.transitions = new Map();
-
-    /**
-     * A map of possible symbols reductions.
-     * @type {Map<any, any>}
-     */
-    that.reductions = new Map();
+    that.actions = new Map();
 
     /**
      * The list of possible initial symbols.

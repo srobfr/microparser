@@ -24,7 +24,7 @@ describe('ParseTableBuilder', function () {
             g.unshift(g); // g = [g, 'A'];
             const parseTable = parseTableBuilder.build(g);
             debug(parseTable);
-            assert.equal(parseTable.transitions.size, 1);
+            assert.equal(parseTable.actions.size, 1);
             const transitions = parseTable.transitions.values().next().value;
             assert.equal(transitions.size, 1);
             assert.equal(parseTable.reductions.size, 1);

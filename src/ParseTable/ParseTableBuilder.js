@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const ParseTable = require('./ParseTable');
+const {treeAdd} = require('../utils/tree');
 
 /**
  * ParseTable instances builder.
@@ -49,22 +50,6 @@ function ParseTableBuilder() {
         return us(value);
     }
 
-    function addToTree(tree, ...args) {
-        let t = tree;
-        for (let i = 0, l = args.length; i < l; i++) {
-            const a = args[i];
-            if (i === (l - 1)) {
-                // Here t should be a Set
-                t.add(a);
-            } else {
-                // t is a Map
-                const nt = t.get(a) || (i === l - 2 ? new Set() : new Map());
-                t.set(a, nt);
-                t = nt;
-            }
-        }
-    }
-
     function computeFirstAndLastTerminalsBySymbols(topSymbol) {
         const resolversBySymbol = new Map();
         const resolved = new Map();
@@ -90,7 +75,7 @@ function ParseTableBuilder() {
 
                 if (grammar.length > 0) {
                     const gf = _.first(grammar);
-                    addToTree(resolversBySymbol, gf, () => {
+                    treeAdd(resolversBySymbol, gf, () => {
                         if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
                         const r = resolved.get(grammar);
                         if (r.firsts !== resolved.get(gf).firsts) {
@@ -99,7 +84,7 @@ function ParseTableBuilder() {
                         }
                     });
                     const gl = _.last(grammar);
-                    addToTree(resolversBySymbol, gl, () => {
+                    treeAdd(resolversBySymbol, gl, () => {
                         if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
                         const r = resolved.get(grammar);
                         if (r.lasts !== resolved.get(gl).lasts) {
@@ -112,7 +97,7 @@ function ParseTableBuilder() {
                 // Or
                 for (const g of grammar.or) {
                     setupResolvers(g, visited);
-                    addToTree(resolversBySymbol, g, () => {
+                    treeAdd(resolversBySymbol, g, () => {
                         if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
                         const gr = resolved.get(g);
                         const r = resolved.get(grammar);
@@ -125,7 +110,7 @@ function ParseTableBuilder() {
                     });
                 }
             } else {
-                addToTree(resolversBySymbol, null, () => {
+                treeAdd(resolversBySymbol, null, () => {
                     resolved.set(grammar, {firsts: new Set([grammar]), lasts: new Set([grammar])});
                     (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
                 });
@@ -141,9 +126,8 @@ function ParseTableBuilder() {
         return resolved;
     }
 
-    function computeTransitionsAndReductions(topSymbol, firstsLastsBySymbol) {
-        const transitions = new Map();
-        const reductions = new Map();
+    function computeActions(topSymbol, firstsLastsBySymbol) {
+        const actions = new Map();
 
         function walk(grammar, visited) {
             visited = visited || new Set();
@@ -153,6 +137,9 @@ function ParseTableBuilder() {
 
             if (Array.isArray(grammar)) {
                 // Sequence
+                // Reductions
+                if (grammar.length > 0) treeAdd(actions, _.last(grammar), {reduce: grammar});
+
                 let prevLasts = new Set();
                 for (const g of grammar) {
                     walk(g, visited);
@@ -160,20 +147,17 @@ function ParseTableBuilder() {
                     for (const l of prevLasts) {
                         for (const f of subFirsts) {
                             // Transitions
-                            addToTree(transitions, l, f);
+                            treeAdd(actions, l, {shift: f});
                         }
                     }
                     prevLasts = subLasts;
                 }
-
-                // Reductions
-                if (grammar.length > 0) addToTree(reductions, _.last(grammar), grammar);
             } else if (grammar.or) {
                 // Or
                 for (const g of grammar.or) {
                     walk(g, visited);
                     // Reductions
-                    addToTree(reductions, g, grammar);
+                    treeAdd(actions, g, {reduce: grammar});
                 }
             } else {
                 // Terminal
@@ -182,7 +166,7 @@ function ParseTableBuilder() {
 
         walk(topSymbol);
 
-        return {transitions, reductions};
+        return {actions};
     }
 
     /**
@@ -200,13 +184,12 @@ function ParseTableBuilder() {
         }
 
         // Then, compute transitions & reductions
-        const {transitions, reductions} = computeTransitionsAndReductions(topSymbol, firstsLastsBySymbol);
+        const {actions} = computeActions(topSymbol, firstsLastsBySymbol);
 
         const parseTable = new ParseTable();
         parseTable.firstSymbols = Array.from(firstsLastsBySymbol.get(topSymbol).firsts);
         parseTable.topSymbol = topSymbol;
-        parseTable.transitions = transitions;
-        parseTable.reductions = reductions;
+        parseTable.actions = actions;
 
         return parseTable;
     };
