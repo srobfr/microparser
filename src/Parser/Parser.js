@@ -73,7 +73,7 @@ function Parser() {
 
         if (context.matchedCode !== null) {
             context.evaluate = () => {
-                if (context.symbol.tag) return `<${context.symbol.tag}>${context.matchedCode}</${context.symbol.tag}>`;
+                if (context.symbol.evaluate) return context.symbol.evaluate([context.matchedCode]);
                 return context.matchedCode;
             };
 
@@ -107,14 +107,16 @@ function Parser() {
             }
 
             evaluate = () => {
-                if (reduction.tag) return `<${reduction.tag}>${subContexts.map(context => context.evaluate()).join('')}</${reduction.tag}>`;
-                return subContexts.map(context => context.evaluate()); // TODO
+                const subContextsEvaluations = subContexts.map(context => context.evaluate());
+                if (reduction.evaluate) return reduction.evaluate(subContextsEvaluations);
+                return subContextsEvaluations;
             };
         } else {
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
-                if (reduction.tag) return `<${reduction.tag}>${context.evaluate()}</${reduction.tag}>`;
-                return context.evaluate(); // TODO
+                const subContextsEvaluations = [context.evaluate()];
+                if (reduction.evaluate) return reduction.evaluate(subContextsEvaluations);
+                return subContextsEvaluations;
             };
         }
 

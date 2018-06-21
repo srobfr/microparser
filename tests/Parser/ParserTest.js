@@ -47,11 +47,11 @@ describe('Parser', function () {
         it('Addition', function () {
             const result = parser.parse(expr, '1+2');
             debug(result);
-            assert.equal(`<expr><sum><expr>1</expr>+<expr>2</expr></sum></expr>`, result);
+            assert.equal(`[ [ [ '1' ], '+', [ '2' ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
     });
 
-    describe.only('Closures', function () {
+    describe('Closures', function () {
         it('Noop', function () {
             assert.throws(() => {
                 const g = context => {/* Returns a non-string : never matches anything */
@@ -73,12 +73,12 @@ describe('Parser', function () {
         const hereDocContent = context => {
             // Any text but the previously matched heredoc start id
             const startId = context.previousContext.matchedCode;
-            const m = context.code.substr(context.offset).match(new RegExp('^(.+?)' + startId));
+            const m = context.code.substring(context.offset).match(new RegExp('^(.+?)' + startId));
             return m ? m[1] : null;
         };
         const hereDocEnd = context => {
             const startId = context.previousContext.previousContext.matchedCode;
-            return context.code.substr(context.offset).startsWith(startId) ? startId : null;
+            return context.code.substring(context.offset).startsWith(startId) ? startId : null;
         };
 
         const heredoc = [hereDocStart, hereDocContent, hereDocEnd];
@@ -108,30 +108,34 @@ describe('Parser', function () {
         it('Right to left', function () {
             const result = parser.parse(expr, '1+2*3');
             debug(result);
-            assert.equal(`<sum>1+<mult>2*3</mult></sum>`, result);
+            assert.equal(`[ [ [ '1' ], '+', [ [ [ '2' ], '*', [ '3' ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
         it('Left to right', function () {
             const result = parser.parse(expr, '1*2+3');
             debug(result);
-            assert.equal(`<sum><mult>1*2</mult>+3</sum>`, result);
+            assert.equal(`[ [ [ [ [ '1' ], '*', [ '2' ] ] ], '+', [ '3' ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
     });
 
     describe('Multiple', function () {
         it('End infinite recursion', function () {
+            // In this case, the parser expects an infinite sequence of 'Foo's.
+            // This is useless as the parsing will eventually fail at some point, but technically the parser can handle it.
             assert.throws(() => {
                 const g = ['Foo'];
                 g.push(g);
                 parser.parse(g, 'FooFooFooFoo');
-            }, /FooFooFooFoo\n            \^ expected 'Foo'/);
+            }, /\n            \^ expected 'Foo'/);
         });
 
         it('Start infinite recursion', function () {
+            // In this case, the parser (which parses from left to right) cannot cross the infinite recursion needed to go further.
+            // This is a bad grammar design AND useless anyway.
             assert.throws(() => {
                 const g = ['Foo'];
                 g.unshift(g);
                 parser.parse(g, 'FooFooFooFoo');
-            }, /FooFooFooFoo\n            \^ expected 'Foo'/);
+            }, /\n\^ Grammar error./);
         });
 
         it('End Recursion', function () {
@@ -139,7 +143,7 @@ describe('Parser', function () {
             g.tag = 'foo';
             g.push({or: [g, '']});
             const result = parser.parse(g, 'FooFooFooFoo');
-            assert.equal(`<foo>Foo<foo>Foo<foo>Foo<foo>Foo</foo></foo></foo></foo>`, result);
+            assert.equal(`[ 'Foo', [ [ 'Foo', [ [ 'Foo', [ [ 'Foo', [ '' ] ] ] ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
 
         it('Start Recursion', function () {
@@ -147,7 +151,7 @@ describe('Parser', function () {
             g.tag = 'foo';
             g.unshift({or: [g, '']});
             const result = parser.parse(g, 'FooFooFooFoo');
-            assert.equal(`<foo><foo><foo><foo>Foo</foo>Foo</foo>Foo</foo>Foo</foo>`, result);
+            assert.equal(`[ [ [ [ [ [ [ [ '' ], 'Foo' ] ], 'Foo' ] ], 'Foo' ] ], 'Foo' ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
     });
 });
