@@ -2,32 +2,35 @@ const assert = require('assert');
 const ParseTableBuilder = require('../../src/ParseTable/ParseTableBuilder');
 const ParseTable = require('../../src/ParseTable/ParseTable');
 const debug = require('debug')('microparser:parseTableBuilderTest');
+const util = require('util');
 
+/**
+ * Tests the ParseTable builder.
+ */
 describe('ParseTableBuilder', function () {
     const parseTableBuilder = new ParseTableBuilder();
 
     it('Scalar', function () {
         const parseTable = parseTableBuilder.build('A');
         // debug(parseTable);
+        // console.log(util.inspect(parseTable, {hidden: true, depth: 30}));
         assert(parseTable instanceof ParseTable);
-        assert(parseTable.topSymbol instanceof String);
-        assert.equal(parseTable.topSymbol.valueOf(), 'A');
-        assert.equal(parseTable.firstSymbols.length, 1);
-        assert.equal(parseTable.firstSymbols[0].valueOf(), 'A');
-        assert.equal(parseTable.transitions.size, 0);
-        assert.equal(parseTable.reductions.size, 0);
+        assert.equal(`ParseTable {
+  actions: Map { [String: 'A'] => Set { { finish: true } } },
+  firstSymbols: [ [String: 'A'] ],
+  topSymbol: [String: 'A'] }`, util.inspect(parseTable, {hidden: true, depth: 30}));
     });
 
     describe('Sequence', function () {
-        it.only('Start recursion', function () {
+        it('Start recursion', function () {
             const g = ['A'];
             g.unshift(g); // g = [g, 'A'];
             const parseTable = parseTableBuilder.build(g);
-            debug(parseTable);
-            assert.equal(parseTable.actions.size, 1);
-            const transitions = parseTable.transitions.values().next().value;
-            assert.equal(transitions.size, 1);
-            assert.equal(parseTable.reductions.size, 1);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'A'] => Set { { reduce: [ [Circular], [String: 'A'] ] } },
+  [ [Circular], [String: 'A'] ] => Set { { shift: [String: 'A'] }, { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('End recursion', function () {
@@ -35,10 +38,10 @@ describe('ParseTableBuilder', function () {
             g.push(g); // g = ['A', g];
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.transitions.size, 1);
-            const transitions = parseTable.transitions.values().next().value;
-            assert.equal(transitions.size, 1);
-            assert.equal(parseTable.reductions.size, 1);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [ [String: 'A'], [Circular] ] => Set { { reduce: [ [String: 'A'], [Circular] ] }, { finish: true } },
+  [String: 'A'] => Set { { shift: [String: 'A'] } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Middle recursion', function () {
@@ -46,11 +49,12 @@ describe('ParseTableBuilder', function () {
             g.push(g, 'B'); // g = ['A', g, 'B'];
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.transitions.size, 2);
-            const transitions = parseTable.transitions.values().next().value;
-            assert.equal(transitions.size, 1);
-            assert.equal(parseTable.reductions.size, 1);
-        });
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'B'] => Set { { reduce: [ [String: 'A'], [Circular], [String: 'B'] ] } },
+  [String: 'A'] => Set { { shift: [String: 'A'] } },
+  [ [String: 'A'], [Circular], [String: 'B'] ] => Set { { shift: [String: 'B'] }, { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            });
 
         it('Start & End', function () {
             assert.throws(() => {
@@ -59,9 +63,7 @@ describe('ParseTableBuilder', function () {
                 g.push(g); // g = [g, 'A', g];
                 const parseTable = parseTableBuilder.build(g);
                 debug(parseTable);
-                assert.equal(parseTable.transitions.size, 1);
-                assert.equal(parseTable.reductions.size, 1);
-            });
+            }, /Wrong grammar/);
         });
     });
 
@@ -70,25 +72,57 @@ describe('ParseTableBuilder', function () {
             const g = {or: ['A']};
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 1);
-        });
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'A'] => Set { { reduce: { or: [ [String: 'A'] ] } } },
+  { or: [ [String: 'A'] ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            });
 
         it('Multiple', function () {
             const g = {or: ['A', 'B', 'C']};
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 3);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'A'] => Set {
+  { reduce: { or: [ [String: 'A'], [String: 'B'], [String: 'C'] ] } } },
+  [String: 'B'] => Set {
+  { reduce: { or: [ [String: 'A'], [String: 'B'], [String: 'C'] ] } } },
+  [String: 'C'] => Set {
+  { reduce: { or: [ [String: 'A'], [String: 'B'], [String: 'C'] ] } } },
+  { or: [ [String: 'A'], [String: 'B'], [String: 'C'] ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Deep', function () {
             const g = {or: ['A', 'B', {or: ['C', 'D']}]};
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 4);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 5);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'A'] => Set {
+  { reduce: 
+   { or: 
+      [ [String: 'A'],
+        [String: 'B'],
+        { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
+  [String: 'B'] => Set {
+  { reduce: 
+   { or: 
+      [ [String: 'A'],
+        [String: 'B'],
+        { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
+  [String: 'C'] => Set { { reduce: { or: [ [String: 'C'], [String: 'D'] ] } } },
+  [String: 'D'] => Set { { reduce: { or: [ [String: 'C'], [String: 'D'] ] } } },
+  { or: [ [String: 'C'], [String: 'D'] ] } => Set {
+  { reduce: 
+   { or: 
+      [ [String: 'A'],
+        [String: 'B'],
+        { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
+  { or: 
+   [ [String: 'A'],
+     [String: 'B'],
+     { or: [ [String: 'C'], [String: 'D'] ] } ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('No terminal', function () {
@@ -96,7 +130,7 @@ describe('ParseTableBuilder', function () {
                 const g = [];
                 g.push(g);
                 parseTableBuilder.build(g);
-            });
+            }, /no reachable terminal symbol/);
         });
 
         it('Recursive', function () {
@@ -108,36 +142,44 @@ describe('ParseTableBuilder', function () {
                 assert.equal(parseTable.firstSymbols.length, 1);
                 assert.equal(parseTable.transitions.size, 0);
                 assert.equal(parseTable.reductions.size, 1);
-            });
+            }, /no reachable terminal symbol/);
         });
 
         it('Recursive start with content', function () {
             const g = {or: ['A']};
             g.or.push(g);
             const parseTable = parseTableBuilder.build(g);
-            debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 2);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'A'] => Set { { reduce: { or: [ [String: 'A'], [Circular] ] } } },
+  { or: [ [String: 'A'], [Circular] ] } => Set {
+  { reduce: { or: [ [String: 'A'], [Circular] ] } },
+  { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+
         });
 
         it('Recursive end with content', function () {
             const g = {or: ['A']};
             g.or.unshift(g);
             const parseTable = parseTableBuilder.build(g);
-            debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 2);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  { or: [ [Circular], [String: 'A'] ] } => Set {
+  { reduce: { or: [ [Circular], [String: 'A'] ] } },
+  { finish: true } },
+  [String: 'A'] => Set { { reduce: { or: [ [Circular], [String: 'A'] ] } } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Empty Or', function () {
             const g = {or: []};
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 0);
-            assert.equal(parseTable.reductions.size, 1);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: ''] => Set { { reduce: { or: [ [String: ''] ] } } },
+  { or: [ [String: ''] ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
     });
 
@@ -145,9 +187,20 @@ describe('ParseTableBuilder', function () {
         it('Or+Sequence', function () {
             const parseTable = parseTableBuilder.build(['A', {or: ['B', 'C']}, 'D']);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 3);
-            assert.equal(parseTable.reductions.size, 3);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'D'] => Set {
+  { reduce: 
+   [ [String: 'A'],
+     { or: [ [String: 'B'], [String: 'C'] ] },
+     [String: 'D'] ] } },
+  [String: 'B'] => Set { { reduce: { or: [ [String: 'B'], [String: 'C'] ] } } },
+  [String: 'C'] => Set { { reduce: { or: [ [String: 'B'], [String: 'C'] ] } } },
+  [String: 'A'] => Set { { shift: [String: 'B'] }, { shift: [String: 'C'] } },
+  { or: [ [String: 'B'], [String: 'C'] ] } => Set { { shift: [String: 'D'] } },
+  [ [String: 'A'],
+  { or: [ [String: 'B'], [String: 'C'] ] },
+  [String: 'D'] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Recursion with exit', function () {
@@ -156,34 +209,57 @@ describe('ParseTableBuilder', function () {
             g.push(o); // g = ['A', {or: [g, 'End']}]
 
             const parseTable = parseTableBuilder.build(g);
-            debug(parseTable);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  { or: [ [ [String: 'A'], [Circular] ], [String: 'End'] ] } => Set {
+  { reduce: [ [String: 'A'], { or: [ [Circular], [String: 'End'] ] } ] } },
+  [ [String: 'A'], { or: [ [Circular], [String: 'End'] ] } ] => Set {
+  { reduce: { or: [ [ [String: 'A'], [Circular] ], [String: 'End'] ] } },
+  { finish: true } },
+  [String: 'End'] => Set {
+  { reduce: { or: [ [ [String: 'A'], [Circular] ], [String: 'End'] ] } } },
+  [String: 'A'] => Set { { shift: [String: 'A'] }, { shift: [String: 'End'] } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Empty sequence Start', function () {
             const g = [[], 'B'];
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 1);
-            assert.equal(parseTable.reductions.size, 2);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'B'] => Set { { reduce: [ [ [String: ''] ], [String: 'B'] ] } },
+  [String: ''] => Set { { reduce: [ [String: ''] ] } },
+  [ [String: ''] ] => Set { { shift: [String: 'B'] } },
+  [ [ [String: ''] ], [String: 'B'] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Empty sequence Middle', function () {
             const g = ['A', [], 'B'];
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 2);
-            assert.equal(parseTable.reductions.size, 2);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'B'] => Set {
+  { reduce: [ [String: 'A'], [ [String: ''] ], [String: 'B'] ] } },
+  [String: ''] => Set { { reduce: [ [String: ''] ] } },
+  [String: 'A'] => Set { { shift: [String: ''] } },
+  [ [String: ''] ] => Set { { shift: [String: 'B'] } },
+  [ [String: 'A'], [ [String: ''] ], [String: 'B'] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Empty sequence End', function () {
             const g = ['A', 'B', []];
             const parseTable = parseTableBuilder.build(g);
             // debug(parseTable);
-            assert.equal(parseTable.firstSymbols.length, 1);
-            assert.equal(parseTable.transitions.size, 2);
-            assert.equal(parseTable.reductions.size, 2);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [ [String: ''] ] => Set {
+  { reduce: [ [String: 'A'], [String: 'B'], [ [String: ''] ] ] } },
+  [String: 'A'] => Set { { shift: [String: 'B'] } },
+  [String: ''] => Set { { reduce: [ [String: ''] ] } },
+  [String: 'B'] => Set { { shift: [String: ''] } },
+  [ [String: 'A'], [String: 'B'], [ [String: ''] ] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
 
         it('Complex expression', function () {
@@ -195,6 +271,107 @@ describe('ParseTableBuilder', function () {
 
             const parseTable = parseTableBuilder.build(expr);
             // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  /^\\d+/ => Set {
+  { reduce: 
+   { or: 
+      [ /^\\d+/,
+        [ [String: '('], [Circular], [String: ')'] ],
+        [ [Circular], [String: '*'], [Circular] ],
+        [ [Circular], [String: '+'], [Circular] ] ] } } },
+  [String: ')'] => Set {
+  { reduce: 
+   [ [String: '('],
+     { or: 
+        [ /^\\d+/,
+          [Circular],
+          [ [Circular], [String: '*'], [Circular] ],
+          [ [Circular], [String: '+'], [Circular] ] ] },
+     [String: ')'] ] } },
+  [String: '('] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
+  { or: 
+   [ /^\\d+/,
+     [ [String: '('], [Circular], [String: ')'] ],
+     [ [Circular], [String: '*'], [Circular] ],
+     [ [Circular], [String: '+'], [Circular] ] ] } => Set {
+  { shift: [String: ')'] },
+  { reduce: 
+   [ { or: 
+        [ /^\\d+/,
+          [ [String: '('], [Circular], [String: ')'] ],
+          [Circular],
+          [ [Circular], [String: '+'], [Circular] ] ] },
+     [String: '*'],
+     { or: 
+        [ /^\\d+/,
+          [ [String: '('], [Circular], [String: ')'] ],
+          [Circular],
+          [ [Circular], [String: '+'], [Circular] ] ] } ] },
+  { shift: [String: '*'] },
+  { reduce: 
+   [ { or: 
+        [ /^\\d+/,
+          [ [String: '('], [Circular], [String: ')'] ],
+          [ [Circular], [String: '*'], [Circular] ],
+          [Circular] ] },
+     [String: '+'],
+     { or: 
+        [ /^\\d+/,
+          [ [String: '('], [Circular], [String: ')'] ],
+          [ [Circular], [String: '*'], [Circular] ],
+          [Circular] ] } ] },
+  { shift: [String: '+'] },
+  { finish: true } },
+  [ [String: '('],
+  { or: 
+     [ /^\\d+/,
+       [Circular],
+       [ [Circular], [String: '*'], [Circular] ],
+       [ [Circular], [String: '+'], [Circular] ] ] },
+  [String: ')'] ] => Set {
+  { reduce: 
+   { or: 
+      [ /^\\d+/,
+        [ [String: '('], [Circular], [String: ')'] ],
+        [ [Circular], [String: '*'], [Circular] ],
+        [ [Circular], [String: '+'], [Circular] ] ] } } },
+  [String: '*'] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
+  [ { or: 
+     [ /^\\d+/,
+       [ [String: '('], [Circular], [String: ')'] ],
+       [Circular],
+       [ [Circular], [String: '+'], [Circular] ] ] },
+  [String: '*'],
+  { or: 
+     [ /^\\d+/,
+       [ [String: '('], [Circular], [String: ')'] ],
+       [Circular],
+       [ [Circular], [String: '+'], [Circular] ] ] } ] => Set {
+  { reduce: 
+   { or: 
+      [ /^\\d+/,
+        [ [String: '('], [Circular], [String: ')'] ],
+        [ [Circular], [String: '*'], [Circular] ],
+        [ [Circular], [String: '+'], [Circular] ] ] } } },
+  [String: '+'] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
+  [ { or: 
+     [ /^\\d+/,
+       [ [String: '('], [Circular], [String: ')'] ],
+       [ [Circular], [String: '*'], [Circular] ],
+       [Circular] ] },
+  [String: '+'],
+  { or: 
+     [ /^\\d+/,
+       [ [String: '('], [Circular], [String: ')'] ],
+       [ [Circular], [String: '*'], [Circular] ],
+       [Circular] ] } ] => Set {
+  { reduce: 
+   { or: 
+      [ /^\\d+/,
+        [ [String: '('], [Circular], [String: ')'] ],
+        [ [Circular], [String: '*'], [Circular] ],
+        [ [Circular], [String: '+'], [Circular] ] ] } } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
     });
 });

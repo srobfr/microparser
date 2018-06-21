@@ -140,17 +140,15 @@ function ParseTableBuilder() {
                 // Reductions
                 if (grammar.length > 0) treeAdd(actions, _.last(grammar), {reduce: grammar});
 
-                let prevLasts = new Set();
+                // Transitions
+                let prev = null;
                 for (const g of grammar) {
                     walk(g, visited);
                     const {firsts: subFirsts, lasts: subLasts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
-                    for (const l of prevLasts) {
-                        for (const f of subFirsts) {
-                            // Transitions
-                            treeAdd(actions, l, {shift: f});
-                        }
+                    if (prev) for (const f of subFirsts) {
+                        treeAdd(actions, prev, {shift: f});
                     }
-                    prevLasts = subLasts;
+                    prev = g;
                 }
             } else if (grammar.or) {
                 // Or
@@ -165,8 +163,9 @@ function ParseTableBuilder() {
         }
 
         walk(topSymbol);
+        treeAdd(actions, topSymbol, {finish: true});
 
-        return {actions};
+        return actions;
     }
 
     /**
@@ -184,7 +183,7 @@ function ParseTableBuilder() {
         }
 
         // Then, compute transitions & reductions
-        const {actions} = computeActions(topSymbol, firstsLastsBySymbol);
+        const actions = computeActions(topSymbol, firstsLastsBySymbol);
 
         const parseTable = new ParseTable();
         parseTable.firstSymbols = Array.from(firstsLastsBySymbol.get(topSymbol).firsts);
