@@ -21,6 +21,17 @@ describe('ParseTableBuilder', function () {
   topSymbol: [String: 'A'] }`, util.inspect(parseTable, {hidden: true, depth: 30}));
     });
 
+    it('Closure', function () {
+        const g = (context) => {};
+        const parseTable = parseTableBuilder.build(g);
+        // debug(parseTable);
+        // console.log(util.inspect(parseTable, {hidden: true, depth: 30}));
+        assert.equal(`ParseTable {
+  actions: Map { [Function: g] => Set { { finish: true } } },
+  firstSymbols: [ [Function: g] ],
+  topSymbol: [Function: g] }`, util.inspect(parseTable, {hidden: true, depth: 30}));
+    });
+
     describe('Sequence', function () {
         it('Start recursion', function () {
             const g = ['A'];
@@ -54,7 +65,7 @@ describe('ParseTableBuilder', function () {
   [String: 'B'] => Set { { reduce: [ [String: 'A'], [Circular], [String: 'B'] ] } },
   [String: 'A'] => Set { { shift: [String: 'A'] } },
   [ [String: 'A'], [Circular], [String: 'B'] ] => Set { { shift: [String: 'B'] }, { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
-            });
+        });
 
         it('Start & End', function () {
             assert.throws(() => {
@@ -76,7 +87,7 @@ describe('ParseTableBuilder', function () {
             assert.equal(`Map {
   [String: 'A'] => Set { { reduce: { or: [ [String: 'A'] ] } } },
   { or: [ [String: 'A'] ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
-            });
+        });
 
         it('Multiple', function () {
             const g = {or: ['A', 'B', 'C']};

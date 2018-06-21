@@ -1,5 +1,6 @@
 const Context = require('./Context');
 const ParseTableBuilder = require('../ParseTable/ParseTableBuilder');
+const {treeAdd, treeHas} = require('../utils/tree');
 const debug = require('debug')('microparser:parser');
 
 /**
@@ -32,7 +33,6 @@ function Parser() {
                     expected.length
                         ? "expected " + expected.map(function (expected) {
                         if (expected === null) return "EOF";
-                        if (expected.type === "not") return "not(" + require("util").inspect(expected.value, {colors: false}) + ")";
                         return require("util").inspect(expected, {colors: false});
                     }).join(" or ")
                         : "Grammar error."
@@ -63,34 +63,24 @@ function Parser() {
         const code = substr(context.code, context.offset);
         const symbol = context.symbol;
         if (context.symbol instanceof String && code.startsWith(context.symbol)) context.matchedCode = symbol.valueOf();
-        if (context.symbol instanceof RegExp) {
+        else if (context.symbol instanceof RegExp) {
             const m = code.match(symbol);
             context.matchedCode = (m && m[0]);
         }
-
-        return (context.matchedCode !== null);
-    }
-
-    function computeNextContexts(context, parseTable) {
-        const matchedLength = context.matchedCode ? context.matchedCode.length : 0;
-        const nextOffset = context.offset + matchedLength;
-        const transitions = parseTable.transitions.get(context.symbol) || new Set();
-        const nextContexts = new Set();
-        for (const transition of transitions) {
-            const nextContext = new Context();
-            nextContext.code = context.code;
-            nextContext.offset = nextOffset;
-            nextContext.symbol = transition;
-            nextContext.previousContext = context;
-            nextContexts.add(nextContext);
+        else if (context.symbol instanceof Function) {
+            context.matchedCode = context.symbol(context) || null;
         }
 
-        return nextContexts;
-    }
+        if (context.matchedCode !== null) {
+            context.evaluate = () => {
+                if (context.symbol.tag) return `<${context.symbol.tag}>${context.matchedCode}</${context.symbol.tag}>`;
+                return context.matchedCode;
+            };
 
-    function isTerminal(context) {
-        const symbol = context.symbol;
-        return !(Array.isArray(symbol) || symbol.or !== undefined)
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -117,7 +107,7 @@ function Parser() {
             }
 
             evaluate = () => {
-                if (context.symbol.tag) return `<${reduction.tag}>${subContexts.map(context => context.evaluate()).join('')}</${reduction.tag}>`;
+                if (reduction.tag) return `<${reduction.tag}>${subContexts.map(context => context.evaluate()).join('')}</${reduction.tag}>`;
                 return subContexts.map(context => context.evaluate()); // TODO
             };
         } else {
@@ -139,6 +129,22 @@ function Parser() {
         reducedContext.evaluate = evaluate;
 
         return reducedContext;
+    }
+
+    /**
+     * Removes competing contexts (same offset, symbol & matchedCode) by keeping the first.
+     *
+     * @param contexts
+     */
+    function dedupContextsSet(contexts) {
+        const dedupTree = new Map();
+        for (const context of contexts) {
+            if (treeHas(dedupTree, context.offset, context.symbol, context.matchedCode)) {
+                debug({deduped: context});
+                contexts.delete(context);
+            }
+            else treeAdd(dedupTree, context.offset, context.symbol, context.matchedCode);
+        }
     }
 
     /**
@@ -164,100 +170,77 @@ function Parser() {
         }
 
         // Initialize first contexts
-        let contextsToMatch = new Set(parseTable.firstSymbols.map(symbol => {
+        let contexts = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
             context.symbol = symbol;
             context.code = code;
             return context;
+        }).filter(context => {
+            let r = matchContext(context);
+            if (r) debug({shifted: context});
+            else onFail(context);
+            return r;
         }));
 
-        let contextsToReduce = new Set();
         const finalContexts = new Set();
 
-        while (contextsToMatch.size > 0 || contextsToReduce.size > 0) {
-            debug({toMatch: contextsToMatch.size});
+        while (contexts.size > 0) { // TODO
+            // debug({contexts: contexts.size});
+            let newContexts = new Set();
+            for (const context of contexts) {
+                // Get possible actions
+                const actions = parseTable.actions.get(context.symbol);
 
-            // Match terminal contexts
-            for (const context of contextsToMatch) {
-                matchContext(context);
-                if (context.matchedCode !== null) {
-                    // The context matched the code.
-                    contextsToReduce.add(context);
-                    context.evaluate = () => {
-                        if (context.symbol.tag) return `<${context.symbol.tag}>${context.matchedCode}</${context.symbol.tag}>`;
-                        return context.matchedCode; // TODO
-                    };
-                    debug({matched: context.evaluate()});
-                } else {
-                    // The context dit not match the code.
-                    onFail(context);
-                    // debug({matchFailed: context});
-                }
-            }
-
-            contextsToMatch = new Set();
-
-            debug({toReduce: contextsToReduce.size});
-
-            // Process contexts
-            for (const context of contextsToReduce) {
-                const previousContexts = new Set([context]);
-
-                {
-                    // Reduction
-                    let reductions = parseTable.reductions.get(context.symbol) || new Set();
-                    for (const reduction of reductions) {
-                        const reducedContext = reduceContext(context, reduction);
-                        if (!reducedContext) continue;
-
-                        debug({reduced: reducedContext.evaluate()});
-                        contextsToReduce.add(reducedContext);
-                        previousContexts.add(reducedContext);
-
-                        if (reducedContext.previousContext === null && reducedContext.symbol === parseTable.topSymbol) {
-                            finalContexts.add(reducedContext);
+                // Here we produce a new context for each possible action
+                for (const action of actions) {
+                    if (action.shift) {
+                        const newContext = new Context();
+                        newContext.code = context.code;
+                        newContext.offset = context.offset + (context.matchedCode.length);
+                        newContext.previousContext = context;
+                        newContext.symbol = action.shift;
+                        if (!matchContext(newContext)) {
+                            onFail(newContext);
+                            continue;
                         }
-                    }
-                }
 
-                {
-                    // If the context is a terminal, find next terminal contexts to match
-                    if (isTerminal(context)) {
-                        for (const previousContext of previousContexts) {
-                            const nextContexts = computeNextContexts(context, parseTable);
-                            for (const c of nextContexts) {
-                                c.previousContext = previousContext;
-                                contextsToMatch.add(c);
-                            }
+                        newContexts.add(newContext);
+                        debug({shifted: newContext});
+                    } else if (action.reduce) {
+                        const newContext = reduceContext(context, action.reduce);
+                        if (!newContext) continue;
+                        newContexts.add(newContext);
+                        debug({reduced: newContext});
+                    } else if (action.finish && context.previousContext === null) {
+                        if (context.matchedCode !== context.code) {
+                            // Too much code to match this grammar.
+                            const eofContext = new Context();
+                            eofContext.code = context.code;
+                            eofContext.offset = context.matchedCode.length;
+                            eofContext.symbol = null; // EOF
+                            eofContext.previousContext = context;
+                            onFail(eofContext);
+                            continue;
                         }
+
+                        finalContexts.add(context);
+                        debug({finished: context});
                     }
                 }
             }
+
+            // Optimization : Shave the contexts tree by removing useless duplicates
+            dedupContextsSet(newContexts);
+
+            debug({before: contexts.size, after: newContexts.size});
+            contexts = newContexts;
         }
 
-        // Filter final contexts
-        for (const context of finalContexts) {
-            if (context.matchedCode.length < code.length) {
-                // There is remaining code.
-                const eofContext = new Context();
-                eofContext.code = context.code;
-                eofContext.offset = context.matchedCode.length;
-                eofContext.symbol = null; // EOF
-                eofContext.previousContext = context;
-                onFail(eofContext);
-                finalContexts.delete(context);
-                continue;
-            }
-
-            // TODO Choisir le meilleur contexte
-            const evaluation = context.evaluate();
-            debug({evaluation});
-        }
-
-        // debug({finalContexts, expected: expected, expectedOffset: expectedOffset});
         if (finalContexts.size === 0) throwSyntaxError(code, expectedOffset, expected);
 
-        // return finalContext.evaluate();
+        // Use first final context.
+        const finalContext = finalContexts.values().next().value;
+        return finalContext.evaluate();
     };
 }
 
