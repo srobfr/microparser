@@ -18,6 +18,7 @@ function ParseTableBuilder() {
         const visited = new Map();
 
         function us(value) {
+            // TODO Copier les propriétés arbitraires des symboles
             if (value === null) return {null: true};
             if (typeof value === 'string') return new String(value);
             if (typeof value === 'number') return new Number(value);

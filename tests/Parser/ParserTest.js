@@ -47,7 +47,7 @@ describe('Parser', function () {
         it('Addition', function () {
             const result = parser.parse(expr, '1+2');
             debug(result);
-            assert.equal(`[ [ [ '1' ], '+', [ '2' ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
+            assert.equal(`[ [ [ [ '1' ] ], [ '+' ], [ [ '2' ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
     });
 
@@ -85,7 +85,7 @@ describe('Parser', function () {
 
         it('Heredoc Match', function () {
             const result = parser.parse(heredoc, 'FOO plop FOO');
-            assert.equal(`[ 'FOO', ' plop ', 'FOO' ]`, util.inspect(result));
+            assert.equal(`[ [ 'FOO' ], [ ' plop ' ], [ 'FOO' ] ]`, util.inspect(result));
         });
 
         it('Unclosed heredoc', function () {
@@ -107,13 +107,19 @@ describe('Parser', function () {
 
         it('Right to left', function () {
             const result = parser.parse(expr, '1+2*3');
-            debug(result);
-            assert.equal(`[ [ [ '1' ], '+', [ [ [ '2' ], '*', [ '3' ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
+            // debug(result);
+            // console.log(util.inspect(result, {hidden: true, depth: 30}));
+            assert.equal(`[ [ [ [ '1' ] ],
+    [ '+' ],
+    [ [ [ [ '2' ] ], [ '*' ], [ [ '3' ] ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
         it('Left to right', function () {
             const result = parser.parse(expr, '1*2+3');
-            debug(result);
-            assert.equal(`[ [ [ [ [ '1' ], '*', [ '2' ] ] ], '+', [ '3' ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
+            // debug(result);
+            // console.log(util.inspect(result, {hidden: true, depth: 30}));
+            assert.equal(`[ [ [ [ [ [ '1' ] ], [ '*' ], [ [ '2' ] ] ] ],
+    [ '+' ],
+    [ [ '3' ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
     });
 
@@ -143,7 +149,9 @@ describe('Parser', function () {
             g.tag = 'foo';
             g.push({or: [g, '']});
             const result = parser.parse(g, 'FooFooFooFoo');
-            assert.equal(`[ 'Foo', [ [ 'Foo', [ [ 'Foo', [ [ 'Foo', [ '' ] ] ] ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
+            // console.log(util.inspect(result, {hidden: true, depth: 30}));
+            assert.equal(`[ [ 'Foo' ],
+  [ [ [ 'Foo' ], [ [ [ 'Foo' ], [ [ [ 'Foo' ], [ [ '' ] ] ] ] ] ] ] ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
 
         it('Start Recursion', function () {
@@ -151,7 +159,29 @@ describe('Parser', function () {
             g.tag = 'foo';
             g.unshift({or: [g, '']});
             const result = parser.parse(g, 'FooFooFooFoo');
-            assert.equal(`[ [ [ [ [ [ [ [ '' ], 'Foo' ] ], 'Foo' ] ], 'Foo' ] ], 'Foo' ]`, util.inspect(result, {hidden: true, depth: 30}));
+            // console.log(util.inspect(result, {hidden: true, depth: 30}));
+            assert.equal(`[ [ [ [ [ [ [ [ [ '' ] ], [ 'Foo' ] ] ], [ 'Foo' ] ] ], [ 'Foo' ] ] ],
+  [ 'Foo' ] ]`, util.inspect(result, {hidden: true, depth: 30}));
         });
+    });
+
+    describe('Evaluate', function () {
+        it('XML-ish', function () {
+            const parser = new Parser({
+                evaluate: function (children, context) {
+                    debug({children, context});
+                    if (context.symbol.tag) return `<${context.symbol.tag}>${children.join('')}</${context.symbol.tag}>`;
+                    return children.join('');
+                }
+            });
+
+            const a = Object.assign(['a'], {tag: 'a'});
+            const b = Object.assign(['b'], {tag: 'b'});
+            const c = Object.assign([a, b], {tag: 'c'});
+            debug({c});
+            const result = parser.parse(c, 'ab');
+            assert.equal(`[ [ [ [ [ [ [ [ '' ], 'Foo' ] ], 'Foo' ] ], 'Foo' ] ], 'Foo' ]`, result);
+        });
+
     });
 });

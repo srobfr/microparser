@@ -7,9 +7,13 @@ const debug = require('debug')('microparser:parser');
  * The Parser
  * @constructor
  */
-function Parser() {
+function Parser(options) {
     const that = this;
     const parseTableBuilder = new ParseTableBuilder();
+
+    options = Object.assign({
+        evaluate: (subContextsEvaluations => subContextsEvaluations),
+    }, options || {});
 
     /**
      * Throws a syntax error based on the expected symbols & offset
@@ -72,11 +76,7 @@ function Parser() {
         }
 
         if (context.matchedCode !== null) {
-            context.evaluate = () => {
-                if (context.symbol.evaluate) return context.symbol.evaluate([context.matchedCode]);
-                return context.matchedCode;
-            };
-
+            context.evaluate = () => (context.symbol.evaluate || options.evaluate)([context.matchedCode], context);
             return true;
         }
 
@@ -108,15 +108,13 @@ function Parser() {
 
             evaluate = () => {
                 const subContextsEvaluations = subContexts.map(context => context.evaluate());
-                if (reduction.evaluate) return reduction.evaluate(subContextsEvaluations);
-                return subContextsEvaluations;
+                return (reduction.evaluate || options.evaluate)(subContextsEvaluations, context);
             };
         } else {
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
                 const subContextsEvaluations = [context.evaluate()];
-                if (reduction.evaluate) return reduction.evaluate(subContextsEvaluations);
-                return subContextsEvaluations;
+                return (reduction.evaluate || options.evaluate)(subContextsEvaluations, context);
             };
         }
 
@@ -186,7 +184,7 @@ function Parser() {
 
         const finalContexts = new Set();
 
-        while (contexts.size > 0) { // TODO
+        while (contexts.size > 0) {
             // debug({contexts: contexts.size});
             let newContexts = new Set();
             for (const context of contexts) {
