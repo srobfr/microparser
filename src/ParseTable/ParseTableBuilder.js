@@ -19,33 +19,31 @@ function ParseTableBuilder() {
 
         function us(value) {
             // TODO Copier les propriétés arbitraires des symboles
-            if (value === null) return {null: true};
-            if (typeof value === 'string') return new String(value);
-            if (typeof value === 'number') return new Number(value);
-            if (typeof value === 'boolean') return new Boolean(value);
+            let r = value;
 
-            const alreadyVisited = visited.get(value);
-            if (alreadyVisited) return alreadyVisited;
+            // Scalar values
+            if (value === null) r = {null: true};
+            else if (typeof value === 'string') r = new String(value);
+            else if (typeof value === 'number') r = new Number(value);
+            else if (typeof value === 'boolean') r = new Boolean(value);
+            else {
+                const alreadyVisited = visited.get(value);
+                if (alreadyVisited) return alreadyVisited;
 
-            if (Array.isArray(value)) {
-                const r = [];
-                visited.set(value, r);
-                value.forEach(v => r.push(us(v)));
-                if (value.length === 0) r.push(us(''));
-                if (value.tag) r.tag = value.tag;
-                return r;
+                if (Array.isArray(value)) {
+                    r = [];
+                    visited.set(value, r);
+                    value.forEach(v => r.push(us(v)));
+                    if (value.length === 0) r.push(us(''));
+                } else if (value.or) {
+                    r = {or: []};
+                    visited.set(value, r);
+                    value.or.forEach(v => r.or.push(us(v)));
+                    if (value.or.length === 0) r.or.push(us(''));
+                }
             }
 
-            if (value.or) {
-                const r = {or: []};
-                visited.set(value, r);
-                value.or.forEach(v => r.or.push(us(v)));
-                if (value.or.length === 0) r.or.push(us(''));
-                if (value.tag) r.tag = value.tag;
-                return r;
-            }
-
-            return value;
+            return r;
         }
 
         return us(value);

@@ -165,7 +165,7 @@ describe('Parser', function () {
         });
     });
 
-    describe('Evaluate', function () {
+    describe.skip('Evaluate', function () {
         it('XML-ish', function () {
             const parser = new Parser({
                 evaluate: function (children, context) {
