@@ -12,7 +12,7 @@ function Parser(options) {
     const parseTableBuilder = new ParseTableBuilder();
 
     options = Object.assign({
-        evaluate: (subContextsEvaluations => subContextsEvaluations),
+        evaluate: (context, subContextsEvaluations) => subContextsEvaluations,
     }, options || {});
 
     /**
@@ -76,7 +76,7 @@ function Parser(options) {
         }
 
         if (context.matchedCode !== null) {
-            context.evaluate = () => (context.symbol.evaluate || options.evaluate)([context.matchedCode], context);
+            context.evaluate = () => (context.symbol.evaluate || options.evaluate)(context, [context.matchedCode]);
             return true;
         }
 
@@ -93,6 +93,7 @@ function Parser(options) {
         const matchedCodes = [];
         let firstContext = context;
         let evaluate;
+        const reducedContext = new Context();
         if (Array.isArray(reduction)) {
             const subContexts = [];
             for (let i = reduction.length - 1; i >= 0; i--) {
@@ -108,19 +109,18 @@ function Parser(options) {
 
             evaluate = () => {
                 const subContextsEvaluations = subContexts.map(context => context.evaluate());
-                return (reduction.evaluate || options.evaluate)(subContextsEvaluations, context);
+                return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
             };
         } else {
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
                 const subContextsEvaluations = [context.evaluate()];
-                return (reduction.evaluate || options.evaluate)(subContextsEvaluations, context);
+                return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
             };
         }
 
         if (firstContext === null) return null;
 
-        const reducedContext = new Context();
         reducedContext.code = context.code;
         reducedContext.symbol = reduction;
         reducedContext.matchedCode = matchedCodes.join('');

@@ -168,9 +168,10 @@ describe('Parser', function () {
     describe('Evaluate', function () {
         it('XML-ish', function () {
             const parser = new Parser({
-                evaluate: function (children, context) {
-                    debug({children, context});
-                    return `<${context.symbol.tag}>${children.join('')}</${context.symbol.tag}>`;
+                evaluate: function (context, children) {
+                    return context.symbol.tag
+                        ? `<${context.symbol.tag}>${children.join('')}</${context.symbol.tag}>`
+                        : context.matchedCode;
                 }
             });
 
