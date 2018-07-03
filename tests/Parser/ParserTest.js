@@ -182,6 +182,5 @@ describe('Parser', function () {
             const result = parser.parse(c, 'ab');
             assert.equal(`<c><a>a</a><b>b</b></c>`, result);
         });
-
     });
 });
