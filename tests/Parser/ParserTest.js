@@ -165,13 +165,12 @@ describe('Parser', function () {
         });
     });
 
-    describe.skip('Evaluate', function () {
+    describe('Evaluate', function () {
         it('XML-ish', function () {
             const parser = new Parser({
                 evaluate: function (children, context) {
                     debug({children, context});
-                    if (context.symbol.tag) return `<${context.symbol.tag}>${children.join('')}</${context.symbol.tag}>`;
-                    return children.join('');
+                    return `<${context.symbol.tag}>${children.join('')}</${context.symbol.tag}>`;
                 }
             });
 
@@ -180,7 +179,7 @@ describe('Parser', function () {
             const c = Object.assign([a, b], {tag: 'c'});
             debug({c});
             const result = parser.parse(c, 'ab');
-            assert.equal(`[ [ [ [ [ [ [ [ '' ], 'Foo' ] ], 'Foo' ] ], 'Foo' ] ], 'Foo' ]`, result);
+            assert.equal(`<c><a>a</a><b>b</b></c>`, result);
         });
 
     });

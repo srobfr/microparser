@@ -17,6 +17,13 @@ function ParseTableBuilder() {
     function unscalarize(value) {
         const visited = new Map();
 
+        function copyProperties(dest, src) {
+            for (let i of Object.keys(src)) {
+                if (i.match(/^(\d+|or)$/)) continue;
+                dest[i] = src[i];
+            }
+        }
+
         function us(value) {
             // TODO Copier les propriétés arbitraires des symboles
             let r = value;
@@ -32,11 +39,13 @@ function ParseTableBuilder() {
 
                 if (Array.isArray(value)) {
                     r = [];
+                    copyProperties(r, value);
                     visited.set(value, r);
                     value.forEach(v => r.push(us(v)));
                     if (value.length === 0) r.push(us(''));
                 } else if (value.or) {
                     r = {or: []};
+                    copyProperties(r, value);
                     visited.set(value, r);
                     value.or.forEach(v => r.or.push(us(v)));
                     if (value.or.length === 0) r.or.push(us(''));

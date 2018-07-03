@@ -111,26 +111,26 @@ describe('ParseTableBuilder', function () {
             // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
             assert.equal(`Map {
   [String: 'A'] => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ [String: 'A'],
         [String: 'B'],
         { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
   [String: 'B'] => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ [String: 'A'],
         [String: 'B'],
         { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
   [String: 'C'] => Set { { reduce: { or: [ [String: 'C'], [String: 'D'] ] } } },
   [String: 'D'] => Set { { reduce: { or: [ [String: 'C'], [String: 'D'] ] } } },
   { or: [ [String: 'C'], [String: 'D'] ] } => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ [String: 'A'],
         [String: 'B'],
         { or: [ [String: 'C'], [String: 'D'] ] } ] } } },
-  { or: 
+  { or:
    [ [String: 'A'],
      [String: 'B'],
      { or: [ [String: 'C'], [String: 'D'] ] } ] } => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
@@ -201,7 +201,7 @@ describe('ParseTableBuilder', function () {
             // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
             assert.equal(`Map {
   [String: 'D'] => Set {
-  { reduce: 
+  { reduce:
    [ [String: 'A'],
      { or: [ [String: 'B'], [String: 'C'] ] },
      [String: 'D'] ] } },
@@ -285,49 +285,49 @@ describe('ParseTableBuilder', function () {
             // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
             assert.equal(`Map {
   /^\\d+/ => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ /^\\d+/,
         [ [String: '('], [Circular], [String: ')'] ],
         [ [Circular], [String: '*'], [Circular] ],
         [ [Circular], [String: '+'], [Circular] ] ] } } },
   [String: ')'] => Set {
-  { reduce: 
+  { reduce:
    [ [String: '('],
-     { or: 
+     { or:
         [ /^\\d+/,
           [Circular],
           [ [Circular], [String: '*'], [Circular] ],
           [ [Circular], [String: '+'], [Circular] ] ] },
      [String: ')'] ] } },
   [String: '('] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
-  { or: 
+  { or:
    [ /^\\d+/,
      [ [String: '('], [Circular], [String: ')'] ],
      [ [Circular], [String: '*'], [Circular] ],
      [ [Circular], [String: '+'], [Circular] ] ] } => Set {
   { shift: [String: ')'] },
-  { reduce: 
-   [ { or: 
+  { reduce:
+   [ { or:
         [ /^\\d+/,
           [ [String: '('], [Circular], [String: ')'] ],
           [Circular],
           [ [Circular], [String: '+'], [Circular] ] ] },
      [String: '*'],
-     { or: 
+     { or:
         [ /^\\d+/,
           [ [String: '('], [Circular], [String: ')'] ],
           [Circular],
           [ [Circular], [String: '+'], [Circular] ] ] } ] },
   { shift: [String: '*'] },
-  { reduce: 
-   [ { or: 
+  { reduce:
+   [ { or:
         [ /^\\d+/,
           [ [String: '('], [Circular], [String: ')'] ],
           [ [Circular], [String: '*'], [Circular] ],
           [Circular] ] },
      [String: '+'],
-     { or: 
+     { or:
         [ /^\\d+/,
           [ [String: '('], [Circular], [String: ')'] ],
           [ [Circular], [String: '*'], [Circular] ],
@@ -335,50 +335,50 @@ describe('ParseTableBuilder', function () {
   { shift: [String: '+'] },
   { finish: true } },
   [ [String: '('],
-  { or: 
+  { or:
      [ /^\\d+/,
        [Circular],
        [ [Circular], [String: '*'], [Circular] ],
        [ [Circular], [String: '+'], [Circular] ] ] },
   [String: ')'] ] => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ /^\\d+/,
         [ [String: '('], [Circular], [String: ')'] ],
         [ [Circular], [String: '*'], [Circular] ],
         [ [Circular], [String: '+'], [Circular] ] ] } } },
   [String: '*'] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
-  [ { or: 
+  [ { or:
      [ /^\\d+/,
        [ [String: '('], [Circular], [String: ')'] ],
        [Circular],
        [ [Circular], [String: '+'], [Circular] ] ] },
   [String: '*'],
-  { or: 
+  { or:
      [ /^\\d+/,
        [ [String: '('], [Circular], [String: ')'] ],
        [Circular],
        [ [Circular], [String: '+'], [Circular] ] ] } ] => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ /^\\d+/,
         [ [String: '('], [Circular], [String: ')'] ],
         [ [Circular], [String: '*'], [Circular] ],
         [ [Circular], [String: '+'], [Circular] ] ] } } },
   [String: '+'] => Set { { shift: /^\\d+/ }, { shift: [String: '('] } },
-  [ { or: 
+  [ { or:
      [ /^\\d+/,
        [ [String: '('], [Circular], [String: ')'] ],
        [ [Circular], [String: '*'], [Circular] ],
        [Circular] ] },
   [String: '+'],
-  { or: 
+  { or:
      [ /^\\d+/,
        [ [String: '('], [Circular], [String: ')'] ],
        [ [Circular], [String: '*'], [Circular] ],
        [Circular] ] } ] => Set {
-  { reduce: 
-   { or: 
+  { reduce:
+   { or:
       [ /^\\d+/,
         [ [String: '('], [Circular], [String: ')'] ],
         [ [Circular], [String: '*'], [Circular] ],
