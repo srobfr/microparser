@@ -95,6 +95,7 @@ function Parser(options) {
         let evaluate;
         const reducedContext = new Context();
         if (Array.isArray(reduction)) {
+            // Sequence
             const subContexts = [];
             for (let i = reduction.length - 1; i >= 0; i--) {
                 if (!c || c.symbol !== reduction[i]) {
@@ -111,10 +112,25 @@ function Parser(options) {
                 const subContextsEvaluations = subContexts.map(context => context.evaluate());
                 return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
             };
-        } else {
+        } else if(reduction.or) {
+            // Or
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
                 const subContextsEvaluations = [context.evaluate()];
+                return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
+            };
+        } else if(reduction.multiple) {
+            // Multiple
+            const subContexts = [];
+            do {
+                subContexts.unshift(c);
+                matchedCodes.unshift(c.matchedCode);
+                firstContext = c;
+                c = c.previousContext;
+            } while(c && c.symbol === reduction.multiple);
+
+            evaluate = () => {
+                const subContextsEvaluations = subContexts.map(context => context.evaluate());
                 return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
             };
         }

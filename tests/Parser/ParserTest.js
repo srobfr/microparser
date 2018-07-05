@@ -16,6 +16,12 @@ describe('Parser', function () {
         debug(result);
     });
 
+    it('Multiple', function () {
+        const result = parser.parse({multiple: 'Foo'}, 'Foo'.repeat(5));
+        debug(result);
+        assert.equal(`[ [ 'Foo' ], [ 'Foo' ], [ 'Foo' ], [ 'Foo' ], [ 'Foo' ] ]`, util.inspect(result, {hidden: true, depth: 30}));
+    });
+
     it('Ambiguous', function () {
         // In this case, we should keep the 'B' case (the first).
         const result = parser.parse(['A', {or: ['B', /^B/, /^[B]/]}, 'C'], 'ABC');

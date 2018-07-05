@@ -194,6 +194,26 @@ describe('ParseTableBuilder', function () {
         });
     });
 
+    describe('Multiple', function () {
+        it('Normal', function () {
+            const g = {multiple: ['a', 'b']};
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable, {hidden: true, depth: 30}));
+            assert.equal(`ParseTable {
+  actions:
+   Map {
+     [String: 'b'] => Set { { reduce: [ [String: 'a'], [String: 'b'] ] } },
+     [String: 'a'] => Set { { shift: [String: 'b'] } },
+     [ [String: 'a'], [String: 'b'] ] => Set {
+     { shift: [String: 'a'] },
+     { reduce: { multiple: [ [String: 'a'], [String: 'b'] ] } } },
+     { multiple: [ [String: 'a'], [String: 'b'] ] } => Set { { finish: true } } },
+  firstSymbols: [ [String: 'a'] ],
+  topSymbol: { multiple: [ [String: 'a'], [String: 'b'] ] } }`, util.inspect(parseTable, {hidden: true, depth: 30}));
+        });
+    });
+
     describe('Special cases', function () {
         it('Or+Sequence', function () {
             const parseTable = parseTableBuilder.build(['A', {or: ['B', 'C']}, 'D']);

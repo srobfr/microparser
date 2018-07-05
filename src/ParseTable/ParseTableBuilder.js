@@ -19,7 +19,7 @@ function ParseTableBuilder() {
 
         function copyProperties(dest, src) {
             for (let i of Object.keys(src)) {
-                if (i.match(/^(\d+|or)$/)) continue;
+                if (i.match(/^(\d+|or|multiple)$/)) continue;
                 dest[i] = src[i];
             }
         }
@@ -49,6 +49,10 @@ function ParseTableBuilder() {
                     visited.set(value, r);
                     value.or.forEach(v => r.or.push(us(v)));
                     if (value.or.length === 0) r.or.push(us(''));
+                } else if (value.multiple) {
+                    r = {multiple: us(value.multiple)};
+                    copyProperties(r, value);
+                    visited.set(value, r);
                 }
             }
 
@@ -117,6 +121,21 @@ function ParseTableBuilder() {
                         }
                     });
                 }
+            } else if (grammar.multiple) {
+                // Multiple
+                const g = grammar.multiple;
+                setupResolvers(g, visited);
+                treeAdd(resolversBySymbol, g, () => {
+                    if (!resolved.has(grammar)) resolved.set(grammar, {firsts: new Set(), lasts: new Set()});
+                    const gr = resolved.get(g);
+                    const r = resolved.get(grammar);
+                    const prevCount = r.firsts.size + r.lasts.size;
+                    for (const gf of gr.firsts) r.firsts.add(gf);
+                    for (const gl of gr.lasts) r.lasts.add(gl);
+                    if (r.firsts.size + r.lasts.size !== prevCount) {
+                        (resolversBySymbol.get(grammar) || []).forEach(resolver => resolver());
+                    }
+                });
             } else {
                 treeAdd(resolversBySymbol, null, () => {
                     resolved.set(grammar, {firsts: new Set([grammar]), lasts: new Set([grammar])});
@@ -165,6 +184,19 @@ function ParseTableBuilder() {
                     // Reductions
                     treeAdd(actions, g, {reduce: grammar});
                 }
+            } else if (grammar.multiple) {
+                // Multiple
+                const g = grammar.multiple;
+                walk(g, visited);
+
+                // Transitions
+                const {firsts: subFirsts, lasts: subLasts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
+                for (const f of subFirsts) {
+                    treeAdd(actions, g, {shift: f});
+                }
+
+                // Reductions
+                treeAdd(actions, g, {reduce: grammar});
             } else {
                 // Terminal
             }
