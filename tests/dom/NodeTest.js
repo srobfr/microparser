@@ -7,14 +7,12 @@ const {or, multiple, optional, tag} = require('../../src/dom/helpers');
 describe('Node', function () {
     const parser = parserBuilder.build();
 
-    describe('xml', function () {
+    describe.only('xml', function () {
         it('Simple', function() {
-            const a = tag('a', 'a');
-            const ow = tag('ow', optional(/^\s+/));
-            const separator = [ow, ',', ow];
-            const aList = [a, optional([separator, a])];
+            const ow = optional(/^\s+/);
 
-            const $ = parser.parse(aList, 'a,a');
+            const g = ['a', ow, ',', ow, 'b'];
+            const $ = parser.parse(g, 'a,,,,b');
             assert.equal(`<or>bar</or>`, $.xml());
         });
     });

@@ -178,6 +178,7 @@ function Parser(options) {
         let expectedOffset = 0;
 
         function onFail(context) {
+            debug({failed: context.symbol});
             if (expectedOffset < context.offset) {
                 expectedOffset = context.offset;
                 expected = new Set([context.symbol]);
