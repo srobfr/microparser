@@ -76,7 +76,9 @@ function Parser(options) {
         }
 
         if (context.matchedCode !== null) {
-            context.evaluate = () => (context.symbol.evaluate || options.evaluate)(context, [context.matchedCode]);
+            context.evaluate = () => {
+                return (context.symbol.evaluate || options.evaluate)(context, [context.matchedCode]);
+            };
             return true;
         }
 
@@ -92,8 +94,8 @@ function Parser(options) {
         let c = context;
         const matchedCodes = [];
         let firstContext = context;
-        let evaluate;
         const reducedContext = new Context();
+        let evaluate;
         if (Array.isArray(reduction)) {
             // Sequence
             const subContexts = [];
@@ -116,8 +118,7 @@ function Parser(options) {
             // Or
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
-                const subContextsEvaluations = [context.evaluate()];
-                return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
+                return (reduction.evaluate || options.evaluate)(reducedContext, [context.evaluate()]);
             };
         } else if(reduction.multiple) {
             // Multiple
