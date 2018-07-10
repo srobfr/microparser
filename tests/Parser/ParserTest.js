@@ -28,6 +28,15 @@ describe('Parser', function () {
         debug(result);
     });
 
+    it('Symbol re-usage', function () {
+        const w = {or: [',', '']};
+        const g = ['a', w, 'b', w, 'c'];
+        assert.throws(() => {
+            const result = parser.parse(g, 'abbc');
+            debug(result);
+        }, /\n  \^ expected ',' or 'c'/);
+    });
+
     describe('Simple Expression', function () {
         const v = /^\d+/;
         const expr = {or: [v]};

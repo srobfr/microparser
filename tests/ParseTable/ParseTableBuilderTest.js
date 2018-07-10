@@ -22,7 +22,8 @@ describe('ParseTableBuilder', function () {
     });
 
     it('Closure', function () {
-        const g = (context) => {};
+        const g = (context) => {
+        };
         const parseTable = parseTableBuilder.build(g);
         // debug(parseTable);
         // console.log(util.inspect(parseTable, {hidden: true, depth: 30}));
@@ -75,6 +76,65 @@ describe('ParseTableBuilder', function () {
                 const parseTable = parseTableBuilder.build(g);
                 debug(parseTable);
             }, /Wrong grammar/);
+        });
+
+        it('Symbol re-usage', function () {
+            const w = [','];
+            const g = ['a', w, 'b', w, 'c'];
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'c'] => Set {
+  { reduce:
+   [ [String: 'a'],
+     [ [String: ','] ],
+     [String: 'b'],
+     [ [String: ','] ],
+     [String: 'c'] ] } },
+  [String: ','] => Set { { reduce: [ [String: ','] ] } },
+  [String: 'a'] => Set { { shift: [String: ','] } },
+  [ [String: ','] ] => Set { { shift: [String: 'b'] } },
+  [String: ','] => Set { { reduce: [ [String: ','] ] } },
+  [String: 'b'] => Set { { shift: [String: ','] } },
+  [ [String: ','] ] => Set { { shift: [String: 'c'] } },
+  [ [String: 'a'],
+  [ [String: ','] ],
+  [String: 'b'],
+  [ [String: ','] ],
+  [String: 'c'] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+        });
+
+        it('Symbol re-usage 2', function () {
+            const w = {or: [',']};
+            w.or.push(w);
+            const g = ['a', w, 'b', w, 'c'];
+            const parseTable = parseTableBuilder.build(g);
+            // debug(parseTable);
+            // console.log(util.inspect(parseTable.actions, {hidden: true, depth: 30}));
+            assert.equal(`Map {
+  [String: 'c'] => Set {
+  { reduce:
+   [ [String: 'a'],
+     { or: [ [String: ','], [Circular] ] },
+     [String: 'b'],
+     { or: [ [String: ','], [Circular] ] },
+     [String: 'c'] ] } },
+  [String: ','] => Set { { reduce: { or: [ [String: ','], [Circular] ] } } },
+  { or: [ [String: ','], [Circular] ] } => Set {
+  { reduce: { or: [ [String: ','], [Circular] ] } },
+  { shift: [String: 'b'] } },
+  [String: 'a'] => Set { { shift: [String: ','] } },
+  [String: ','] => Set { { reduce: { or: [ [String: ','], [Circular] ] } } },
+  { or: [ [String: ','], [Circular] ] } => Set {
+  { reduce: { or: [ [String: ','], [Circular] ] } },
+  { shift: [String: 'c'] } },
+  [String: 'b'] => Set { { shift: [String: ','] } },
+  [ [String: 'a'],
+  { or: [ [String: ','], [Circular] ] },
+  [String: 'b'],
+  { or: [ [String: ','], [Circular] ] },
+  [String: 'c'] ] => Set { { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
         });
     });
 
@@ -167,7 +227,6 @@ describe('ParseTableBuilder', function () {
   { or: [ [String: 'A'], [Circular] ] } => Set {
   { reduce: { or: [ [String: 'A'], [Circular] ] } },
   { finish: true } } }`, util.inspect(parseTable.actions, {hidden: true, depth: 30}));
-
         });
 
         it('Recursive end with content', function () {

@@ -4,8 +4,6 @@
  * @returns {{Object}}
  */
 function unscalarize(value) {
-    const visited = new Map();
-
     function copyProperties(dest, src) {
         for (let i of Object.keys(src)) {
             if (i.match(/^(\d+|or|multiple)$/)) continue;
@@ -13,8 +11,7 @@ function unscalarize(value) {
         }
     }
 
-    function us(value) {
-        // TODO Copier les propriétés arbitraires des symboles
+    function us(value, visited) {
         let r = value;
 
         // Scalar values
@@ -26,20 +23,22 @@ function unscalarize(value) {
             const alreadyVisited = visited.get(value);
             if (alreadyVisited) return alreadyVisited;
 
+            visited = new Map(visited);
+
             if (Array.isArray(value)) {
                 r = [];
                 copyProperties(r, value);
                 visited.set(value, r);
-                value.forEach(v => r.push(us(v)));
-                if (value.length === 0) r.push(us(''));
+                value.forEach(v => r.push(us(v, visited)));
+                if (value.length === 0) r.push(us('', visited));
             } else if (value.or) {
                 r = {or: []};
                 copyProperties(r, value);
                 visited.set(value, r);
-                value.or.forEach(v => r.or.push(us(v)));
-                if (value.or.length === 0) r.or.push(us(''));
+                value.or.forEach(v => r.or.push(us(v, visited)));
+                if (value.or.length === 0) r.or.push(us('', visited));
             } else if (value.multiple) {
-                r = {multiple: us(value.multiple)};
+                r = {multiple: us(value.multiple, visited)};
                 copyProperties(r, value);
                 visited.set(value, r);
             }
@@ -48,7 +47,7 @@ function unscalarize(value) {
         return r;
     }
 
-    return us(value);
+    return us(value, new Map());
 }
 
 
