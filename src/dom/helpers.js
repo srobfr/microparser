@@ -14,7 +14,7 @@ helpers.optional = function (grammar) {
 };
 
 helpers.tag = function (tag, grammar) {
-    if (/boolean|number|string/.test(typeof grammar)) grammar = unscalarize(grammar);
+    if (/boolean|number|string/.test(typeof grammar)) grammar = unscalarize(grammar).unscalarized;
     grammar.tag = tag;
     return grammar;
 };

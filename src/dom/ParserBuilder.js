@@ -20,10 +20,9 @@ function ParserBuilder() {
         options = Object.assign({
             evaluate: function (context, children) {
                 // Node builder.
-                const node = new Node(context.symbol, parser);
+                const node = new Node(context.originalGrammar, parser);
                 node.children = children;
                 for (const c of children) if (typeof c !== 'string') c.parent = node;
-
                 return node;
             }
         }, options || {});

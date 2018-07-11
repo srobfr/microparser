@@ -4,6 +4,8 @@
  * @returns {{Object}}
  */
 function unscalarize(value) {
+    const originalValuesMap = new Map();
+
     function copyProperties(dest, src) {
         for (let i of Object.keys(src)) {
             if (i.match(/^(\d+|or|multiple)$/)) continue;
@@ -44,10 +46,15 @@ function unscalarize(value) {
             }
         }
 
+        originalValuesMap.set(r, value);
+
         return r;
     }
 
-    return us(value, new Map());
+    return {
+        originalValuesMap: originalValuesMap,
+        unscalarized: us(value, new Map())
+    };
 }
 
 

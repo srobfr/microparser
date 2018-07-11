@@ -161,7 +161,10 @@ function ParseTableBuilder() {
      * @param grammar
      */
     that.build = function (grammar) {
-        const topSymbol = unscalarize(grammar);
+        const {
+            unscalarized: topSymbol,
+            originalValuesMap: originalValuesMap
+        } = unscalarize(grammar);
 
         // First, compute the first & last terminals of each symbol.
         const firstsLastsBySymbol = computeFirstAndLastTerminalsBySymbols(topSymbol);
@@ -177,6 +180,7 @@ function ParseTableBuilder() {
         parseTable.firstSymbols = Array.from(firstsLastsBySymbol.get(topSymbol).firsts);
         parseTable.topSymbol = topSymbol;
         parseTable.actions = actions;
+        parseTable.originalGrammarsMap = originalValuesMap;
 
         return parseTable;
     };

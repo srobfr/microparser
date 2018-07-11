@@ -90,7 +90,7 @@ function Parser(options) {
      * @param reduction
      * @returns {Context|null}
      */
-    function reduceContext(context, reduction) {
+    function reduceContext(context, reduction, originalGrammarsMap) {
         let c = context;
         const matchedCodes = [];
         let firstContext = context;
@@ -140,6 +140,7 @@ function Parser(options) {
 
         reducedContext.code = context.code;
         reducedContext.symbol = reduction;
+        reducedContext.originalGrammar = originalGrammarsMap.get(reducedContext.symbol);
         reducedContext.matchedCode = matchedCodes.join('');
         reducedContext.offset = firstContext.offset;
         reducedContext.previousContext = firstContext.previousContext;
@@ -172,6 +173,8 @@ function Parser(options) {
      */
     that.parse = function (grammar, code) {
         const parseTable = parseTableBuilder.build(grammar);
+        const originalGrammarsMap = parseTable.originalGrammarsMap;
+
         debug({parseTable});
 
         let expected = new Set();
@@ -191,6 +194,7 @@ function Parser(options) {
         let contexts = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
             context.symbol = symbol;
+            context.originalGrammar = originalGrammarsMap.get(context.symbol);
             context.code = code;
             return context;
         }).filter(context => {
@@ -217,6 +221,7 @@ function Parser(options) {
                         newContext.offset = context.offset + (context.matchedCode.length);
                         newContext.previousContext = context;
                         newContext.symbol = action.shift;
+                        newContext.originalGrammar = originalGrammarsMap.get(newContext.symbol);
                         if (!matchContext(newContext)) {
                             onFail(newContext);
                             continue;
@@ -225,7 +230,7 @@ function Parser(options) {
                         newContexts.add(newContext);
                         debug({shifted: newContext});
                     } else if (action.reduce) {
-                        const newContext = reduceContext(context, action.reduce);
+                        const newContext = reduceContext(context, action.reduce, originalGrammarsMap);
                         if (!newContext) continue;
                         newContexts.add(newContext);
                         debug({reduced: newContext});

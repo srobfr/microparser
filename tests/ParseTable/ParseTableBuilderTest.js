@@ -18,7 +18,8 @@ describe('ParseTableBuilder', function () {
         assert.equal(`ParseTable {
   actions: Map { [String: 'A'] => Set { { finish: true } } },
   firstSymbols: [ [String: 'A'] ],
-  topSymbol: [String: 'A'] }`, util.inspect(parseTable, {hidden: true, depth: 30}));
+  topSymbol: [String: 'A'],
+  originalGrammarsMap: Map { [String: 'A'] => 'A' } }`, util.inspect(parseTable, {hidden: true, depth: 30}));
     });
 
     it('Closure', function () {
@@ -30,7 +31,8 @@ describe('ParseTableBuilder', function () {
         assert.equal(`ParseTable {
   actions: Map { [Function: g] => Set { { finish: true } } },
   firstSymbols: [ [Function: g] ],
-  topSymbol: [Function: g] }`, util.inspect(parseTable, {hidden: true, depth: 30}));
+  topSymbol: [Function: g],
+  originalGrammarsMap: Map { [Function: g] => [Function: g] } }`, util.inspect(parseTable, {hidden: true, depth: 30}));
     });
 
     describe('Sequence', function () {
@@ -269,7 +271,13 @@ describe('ParseTableBuilder', function () {
      { reduce: { multiple: [ [String: 'a'], [String: 'b'] ] } } },
      { multiple: [ [String: 'a'], [String: 'b'] ] } => Set { { finish: true } } },
   firstSymbols: [ [String: 'a'] ],
-  topSymbol: { multiple: [ [String: 'a'], [String: 'b'] ] } }`, util.inspect(parseTable, {hidden: true, depth: 30}));
+  topSymbol: { multiple: [ [String: 'a'], [String: 'b'] ] },
+  originalGrammarsMap:
+   Map {
+     [String: 'a'] => 'a',
+     [String: 'b'] => 'b',
+     [ [String: 'a'], [String: 'b'] ] => [ 'a', 'b' ],
+     { multiple: [ [String: 'a'], [String: 'b'] ] } => { multiple: [ 'a', 'b' ] } } }`, util.inspect(parseTable, {hidden: true, depth: 30}));
         });
     });
 

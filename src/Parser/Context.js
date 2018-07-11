@@ -37,6 +37,12 @@ function Context() {
     that.symbol;
 
     /**
+     * The original grammar.
+     * @type {any}
+     */
+    that.originalGrammar;
+
+    /**
      * The evaluation callback.
      * @type {Function}
      */

@@ -1,3 +1,5 @@
+const debug = require('debug')('microparser:Node');
+
 /**
  * Represents a DOM node
  * @param grammar
@@ -34,7 +36,7 @@ function Node(grammar, parser) {
      * Returns an xml representation of this node's code. The 'tag' property must be set on the subnodes' grammars
      * @returns {string}
      */
-    that.xml = function() {
+    that.xml = function () {
         const childrenXml = that.children.map(c => c.xml ? c.xml() : c).join('');
         return that.grammar.tag
             ? `<${that.grammar.tag}>${childrenXml}</${that.grammar.tag}>`
@@ -45,10 +47,13 @@ function Node(grammar, parser) {
      * Gets or sets this node's text.
      * @returns {string}
      */
-    that.text = function(text) {
+    that.text = function (text) {
         if (text === undefined) return that.children.map(c => c.text ? c.text() : c).join('');
-        // TODO Setter
-
+        const newNode = that.parser.parse(that.grammar, text);
+        that.children = newNode.children;
+        for (const c of that.children) {
+            if (typeof c !== 'string') c.parent = that;
+        }
     };
 }
 
