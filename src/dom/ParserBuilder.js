@@ -2,6 +2,13 @@ const debug = require('debug')('microparser:dom:parser');
 const Parser = require('../Parser/Parser');
 const Node = require('./Node');
 
+// Node extensions
+// require('./nodeExtensions/indent');
+// require('./nodeExtensions/insert');
+// require('./nodeExtensions/removeWithSeparator');
+require('./nodeExtensions/search');
+require('./nodeExtensions/xml');
+
 /**
  * Parser that produce a pseudo-dom.
  * @constructor

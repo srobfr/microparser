@@ -22,39 +22,66 @@ describe('Node', function () {
     });
 
     describe('Querying', function () {
+        const a = ['a'];
+        const b = 'b';
+        const c = tag('c', or(a, b));
+        const g = multiple(c);
+
         it('findByGrammar', function () {
-            this.skip('TODO');
+            const $ = parser.parse(g, 'abbbaa');
+            const $a = $.findByGrammar(a);
+            assert.equal($a.length, 3);
+            $a[1].parent.text('b');
+            assert.equal($.text(), 'abbbba');
         });
         it('findByTag', function () {
-            this.skip('TODO');
+            const $ = parser.parse(g, 'abbaba');
+            const $c = $.findByTag('c');
+            assert.equal($c.length, 6);
+            $c[1].text('a');
+            assert.equal($.text(), 'aababa');
         });
-        it('parent', function () {
-            this.skip('TODO');
+        it('findParentByGrammar', function () {
+            const $ = parser.parse(g, 'abbbaa');
+            const $c = $.findByGrammar(a)[1].findParentByGrammar(c);
+            $c.text('b');
+            assert.equal($.text(), 'abbbba');
         });
     });
 
     describe('Manipulation', function () {
-
-        const id = /^[a-z]+/;
-        const g = tag('foo', ['(', tag('a', [id]), /^ *, */, tag('b', [id]), ')']);
-
+        const item = /^\w/i;
+        const g = multiple(item);
         it('Text update', function () {
-            const $ = parser.parse(g, '(a, b)');
-            $.children[3].text('foo');
-            assert.equal(`(a, foo)`, $.text());
-            assert.equal(`<foo>(<a>a</a>, <b>foo</b>)</foo>`, $.xml());
+            const $ = parser.parse(g, 'abcdef');
+            $.findByGrammar(item)[1].text('B');
+            assert.equal(`aBcdef`, $.text());
         });
         it('append', function () {
-            this.skip('TODO');
+            const $ = parser.parse(g, 'abcdef');
+            const $g = parser.parse(item, 'g');
+            $.append($g);
+            assert.equal(`abcdefg`, $.text());
         });
         it('prepend', function () {
-            this.skip('TODO');
+            const $ = parser.parse(g, 'abcdef');
+            const $g = parser.parse(item, 'g');
+            $.prepend($g);
+            assert.equal(`gabcdef`, $.text());
         });
-        it('insertAfter', function () {
-            this.skip('TODO');
+        it('after', function () {
+            const $ = parser.parse(g, 'abcdef');
+            const $d = $.findByGrammar(item)[3];
+            const $g = parser.parse(item, 'g');
+            $d.after($g);
+            assert.equal(`abcdgef`, $.text());
         });
         it('insertBefore', function () {
-            this.skip('TODO');
+            const $ = parser.parse(g, 'abcdef');
+            const $d = $.findByGrammar(item)[3];
+            const $g = parser.parse(item, 'g');
+            $d.before($g);
+            assert.equal(`abcgdef`, $.text());
         });
     });
 });

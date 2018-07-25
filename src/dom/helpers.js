@@ -5,8 +5,12 @@ helpers.or = function (...grammars) {
     return {or: grammars};
 };
 
-helpers.multiple = function (grammar) {
-    return {multiple: grammar};
+helpers.multiple = function (grammar, separator) {
+    return {multiple: grammar, separator: separator};
+};
+
+helpers.optmul = function (grammar, separator) {
+    return {optmul: grammar, separator: separator};
 };
 
 helpers.optional = function (grammar) {

@@ -4,7 +4,7 @@ const debug = require('debug')('microparser:helpersTest');
 const util = require('util');
 const {or, multiple, optional, tag} = require('../../src/dom/helpers');
 
-describe('Helpers', function () {
+describe('helpers', function () {
     const parser = parserBuilder.build();
 
     describe('or', function () {
@@ -28,7 +28,7 @@ describe('Helpers', function () {
         });
         it('Empty', function() {
             const $ = parser.parse([tag('optional', optional('foo')), 'bar'], 'bar');
-            assert.equal(`<optional></optional>bar`, $.xml());
+            assert.equal(`<optional/>bar`, $.xml());
         });
         it('Error', function() {
             assert.throws(() => {
