@@ -2,7 +2,7 @@ const assert = require('assert');
 const parserBuilder = new (require('../../src/dom/ParserBuilder'))();
 const debug = require('debug')('microparser:NodeTest');
 const util = require('util');
-const {or, multiple, optional, tag} = require('../../src/dom/helpers');
+const {or, multiple, optional, optmul, tag} = require('../../src/dom/helpers');
 
 describe('Node', function () {
     const parser = parserBuilder.build();
@@ -31,19 +31,19 @@ describe('Node', function () {
             const $ = parser.parse(g, 'abbbaa');
             const $a = $.findByGrammar(a);
             assert.equal($a.length, 3);
-            $a[1].parent.text('b');
+            $a.get(1).parent.text('b');
             assert.equal($.text(), 'abbbba');
         });
         it('findByTag', function () {
             const $ = parser.parse(g, 'abbaba');
             const $c = $.findByTag('c');
             assert.equal($c.length, 6);
-            $c[1].text('a');
+            $c.get(1).text('a');
             assert.equal($.text(), 'aababa');
         });
         it('findParentByGrammar', function () {
             const $ = parser.parse(g, 'abbbaa');
-            const $c = $.findByGrammar(a)[1].findParentByGrammar(c);
+            const $c = $.findByGrammar(a).get(1).findParentByGrammar(c);
             $c.text('b');
             assert.equal($.text(), 'abbbba');
         });
@@ -54,7 +54,7 @@ describe('Node', function () {
         const g = multiple(item);
         it('Text update', function () {
             const $ = parser.parse(g, 'abcdef');
-            $.findByGrammar(item)[1].text('B');
+            $.findByGrammar(item).get(1).text('B');
             assert.equal(`aBcdef`, $.text());
         });
         it('append', function () {
@@ -71,17 +71,37 @@ describe('Node', function () {
         });
         it('after', function () {
             const $ = parser.parse(g, 'abcdef');
-            const $d = $.findByGrammar(item)[3];
+            const $d = $.findByGrammar(item).get(3);
             const $g = parser.parse(item, 'g');
             $d.after($g);
             assert.equal(`abcdgef`, $.text());
         });
-        it('insertBefore', function () {
+        it('before', function () {
             const $ = parser.parse(g, 'abcdef');
-            const $d = $.findByGrammar(item)[3];
+            const $d = $.findByGrammar(item).get(3);
             const $g = parser.parse(item, 'g');
             $d.before($g);
             assert.equal(`abcgdef`, $.text());
         });
+    });
+
+    it('WIP', function () {
+        const id = tag('id', /^\w+/);
+        const separator = /^ *, */;
+        const ow = optional(/^ +/);
+        ow.decorate = $ => {
+            $.clean = () => $.text('');
+        };
+
+        const listItem = or(id);
+        const list = tag('list', ['(', ow, optmul(listItem, separator), ow, ')']);
+        listItem.or.push(list);
+
+        const $ = parser.parse(list, '(foo, bar   ,bplop, (             p, ((((())),p))))');
+        $.findByGrammar(separator).text(', ');
+        $.findByGrammar(ow).clean();
+        for(const $id of $.findByGrammar(id)) $id.text($id.text().replace(/o/g, '0'));
+
+        debug($.text());
     });
 });

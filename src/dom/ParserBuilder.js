@@ -30,6 +30,7 @@ function ParserBuilder() {
                 const node = new Node(context.originalGrammar, parser);
                 node.children = children;
                 for (const c of children) if (typeof c !== 'string') c.parent = node;
+                if (context.originalGrammar.decorate) context.originalGrammar.decorate(node);
                 return node;
             }
         }, options || {});

@@ -50,7 +50,6 @@ function Parser(options) {
     }
 
     /**
-     * TODO Optimiser ?
      * @param code
      * @param offset
      * @returns {string}
@@ -88,6 +87,7 @@ function Parser(options) {
     /**
      * @param context
      * @param reduction
+     * @param originalGrammarsMap
      * @returns {Context|null}
      */
     function reduceContext(context, reduction, originalGrammarsMap) {

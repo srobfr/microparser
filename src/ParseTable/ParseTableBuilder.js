@@ -18,7 +18,6 @@ function ParseTableBuilder() {
          * Recursive tree walker
          * @param grammar
          * @param visited
-         * @returns {any}
          */
         function setupResolvers(grammar, visited) {
             visited = visited || new Set();
@@ -119,7 +118,7 @@ function ParseTableBuilder() {
                 let prev = null;
                 for (const g of grammar) {
                     walk(g, visited);
-                    const {firsts: subFirsts, lasts: subLasts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
+                    const {firsts: subFirsts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
                     if (prev) for (const f of subFirsts) {
                         treeAdd(actions, prev, {shift: f});
                     }
@@ -138,7 +137,7 @@ function ParseTableBuilder() {
                 walk(g, visited);
 
                 // Transitions
-                const {firsts: subFirsts, lasts: subLasts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
+                const {firsts: subFirsts} = firstsLastsBySymbol.get(g) || {firsts: new Set(), lasts: new Set()};
                 for (const f of subFirsts) {
                     treeAdd(actions, g, {shift: f});
                 }

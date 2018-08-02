@@ -6,11 +6,12 @@ helpers.or = function (...grammars) {
 };
 
 helpers.multiple = function (grammar, separator) {
-    return {multiple: grammar, separator: separator};
+    if(separator === undefined) return {multiple: grammar};
+    return [grammar, helpers.optmul([separator, grammar])];
 };
 
 helpers.optmul = function (grammar, separator) {
-    return {optmul: grammar, separator: separator};
+    return helpers.optional(helpers.multiple(grammar, separator));
 };
 
 helpers.optional = function (grammar) {

@@ -22,6 +22,12 @@ function ParseTable() {
      * @type {Object}
      */
     that.topSymbol = null;
+
+    /**
+     * The map of original grammar objects, indexed by the unscalarized grammar node.
+     * @type {null}
+     */
+    that.originalGrammarsMap = null;
 }
 
 module.exports = ParseTable;
