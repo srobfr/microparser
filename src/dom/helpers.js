@@ -6,8 +6,15 @@ helpers.or = function (...grammars) {
 };
 
 helpers.multiple = function (grammar, separator) {
-    if(separator === undefined) return {multiple: grammar};
-    return [grammar, helpers.optmul([separator, grammar])];
+    if (separator === undefined) return {multiple: grammar};
+
+    // There is a separator
+    const g = [grammar, helpers.optmul([separator, grammar])];
+    g.evaluate = function(context, children) {
+        const node = new Node(grammar, parser);
+    };
+
+    return g;
 };
 
 helpers.optmul = function (grammar, separator) {
