@@ -10,10 +10,10 @@
   "license": "MIT",
   "dependencies": {
     "debug": "^3.1.0",
-    "lodash": "^4.0.0"
+    "lodash": "^4.17.11"
   },
   "devDependencies": {
-    "mocha": "^3.2.0"
+    "mocha": "^5.2.0"
   },
   "repository": {
     "type": "git",
