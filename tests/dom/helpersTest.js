@@ -19,6 +19,11 @@ describe('helpers', function () {
             const $ = parser.parse(tag('multiple', multiple(tag('bar', 'bar'))), 'barbarbarbar');
             assert.equal(`<multiple><bar>bar</bar><bar>bar</bar><bar>bar</bar><bar>bar</bar></multiple>`, $.xml());
         });
+        it('Separator', function() {
+            const $ = parser.parse(tag('multiple', multiple(tag('bar', 'bar'), tag('sep', ','))), 'bar,bar,bar,bar');
+            assert.equal(7, $.children.length);
+            assert.equal(`<multiple><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar></multiple>`, $.xml());
+        });
     });
 
     describe('optional', function () {

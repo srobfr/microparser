@@ -83,25 +83,23 @@ describe('Node', function () {
             $d.before($g);
             assert.equal(`abcgdef`, $.text());
         });
-    });
+        it('misc', function () {
+            const id = tag('id', /^\w+/);
+            const separator = /^ *, */;
+            const ow = optional(/^ +/);
+            ow.decorate = $ => {
+                $.clean = () => $.text('');
+            };
 
-    it('WIP', function () {
-        const id = tag('id', /^\w+/);
-        const separator = /^ *, */;
-        const ow = optional(/^ +/);
-        ow.decorate = $ => {
-            $.clean = () => $.text('');
-        };
+            const listItem = or(id);
+            const list = tag('list', ['(', ow, optmul(listItem, separator), ow, ')']);
+            listItem.or.push(list);
 
-        const listItem = or(id);
-        const list = tag('list', ['(', ow, optmul(listItem, separator), ow, ')']);
-        listItem.or.push(list);
-
-        const $ = parser.parse(list, '(foo, bar   ,bplop, (             p, ((((())),p))))');
-        $.findByGrammar(separator).text(', ');
-        $.findByGrammar(ow).clean();
-        for(const $id of $.findByGrammar(id)) $id.text($id.text().replace(/o/g, '0'));
-
-        debug($.text());
+            const $ = parser.parse(list, '(foo, bar   ,bplop, (             p, ((((())),p))))');
+            $.findByGrammar(separator).text(', ');
+            $.findByGrammar(ow).clean();
+            for(const $id of $.findByGrammar(id)) $id.text($id.text().replace(/o/g, '0'));
+            assert.equal(`(f00, bar, bpl0p, (p, ((((())), p))))`, $.text());
+        });
     });
 });
