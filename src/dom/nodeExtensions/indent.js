@@ -1,8 +1,11 @@
-const _ = require("lodash");
-const Node = require(__dirname + "/../Node.js");
+const Node = require('../Node');
 
+/**
+ * Returns the theorical indentation string for the current node.
+ * @returns {string}
+ */
 Node.prototype.getIndent = function () {
-    let indent = "";
+    let indent = '';
     let node = this;
     while (true) {
         node = node.parent;

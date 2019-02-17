@@ -1,20 +1,20 @@
 const _ = require("lodash");
-const Node = require(__dirname + "/../Node.js");
+const Node = require('../Node');
 
 function getNodeOrderValue(node, orderItem) {
     // The order item is a predicate
-    if (_.isFunction(orderItem)) return orderItem(node);
+    if (typeof orderItem === 'function') return orderItem(node);
     // The order item is a grammar
     return (node.findOneByGrammar(orderItem) ? 1 : 0);
 }
 
 function compareNodesOrders($node1, $node2, order) {
     let r = 0;
-    for (let i in order) {
-        const v1 = getNodeOrderValue($node1, order[i]);
-        const v2 = getNodeOrderValue($node2, order[i]);
+    for (const o of order) {
+        const v1 = getNodeOrderValue($node1, o);
+        const v2 = getNodeOrderValue($node2, o);
 
-        if (_.isString(v1)) r = v2.localeCompare(v1);
+        if (typeof v1 === 'string') r = v2.localeCompare(v1);
         else r = v1 - v2;
 
         if (r !== 0) break;

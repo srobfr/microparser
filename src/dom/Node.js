@@ -1,20 +1,58 @@
-const _ = require("lodash");
+const debug = require('debug')('microparser:Node');
 
 /**
- * Simple DOM-like data structure.
+ * Represents a DOM node
+ * @param grammar
+ * @param parser
  * @constructor
  */
-function Node() {
+function Node(grammar, parser) {
+    const that = this;
+
+    /**
+     * The original grammar for this node.
+     */
+    that.grammar = grammar;
+
+    /**
+     * The parser that created this node.
+     */
+    that.parser = parser;
+
+    /**
+     * The node parent in the dom.
+     * @type {Node}
+     */
     Object.defineProperty(this, 'parent', {value: null, enumerable: false, configurable: true, writable: true});
     // this.parent = null;
+
+    /**
+     * The previous node sibling.
+     * @type {Node}
+     */
     Object.defineProperty(this, 'prev', {value: null, enumerable: false, configurable: true, writable: true});
     // this.prev = null;
+
+    /**
+     * The next node sibling.
+     * @type {Node}
+     */
     Object.defineProperty(this, 'next', {value: null, enumerable: false, configurable: true, writable: true});
     // this.next = null;
-    this.children = [];
+
+    /**
+     * The children of this node (either strings or Nodes)
+     *
+     * @type {Array<Node|string>}
+     */
+    that.children = [];
 }
 
-Node.prototype.unlink = function () {
+/**
+ * Removes the node from the DOM.
+ * @returns {Node}
+ */
+Node.prototype.remove = function () {
     if (this.next) this.next.prev = this.prev;
     if (this.prev) this.prev.next = this.next;
     if (this.parent) {
@@ -24,10 +62,13 @@ Node.prototype.unlink = function () {
     return this;
 };
 
-Node.prototype.remove = Node.prototype.unlink;
-
+/**
+ * Appends a node into another.
+ * @param node
+ * @returns {Node}
+ */
 Node.prototype.append = function (node) {
-    node.unlink();
+    node.remove();
     if (this.children.length > 0) {
         let prevNode = this.children[this.children.length - 1];
         prevNode.next = node;
@@ -38,8 +79,12 @@ Node.prototype.append = function (node) {
     return this;
 };
 
+/**
+ * Prepends a node into another.
+ * @param node
+ */
 Node.prototype.prepend = function (node) {
-    node.unlink();
+    node.remove();
     if (this.children.length > 0) {
         let nextNode = this.children[0];
         nextNode.prev = node;
@@ -49,8 +94,13 @@ Node.prototype.prepend = function (node) {
     this.children.unshift(node);
 };
 
+/**
+ * Inserts the given node before the current node.
+ * @param node
+ * @returns {Node}
+ */
 Node.prototype.before = function (node) {
-    node.unlink();
+    node.remove();
     node.prev = this.prev;
     node.next = this;
     node.parent = this.parent;
@@ -63,8 +113,13 @@ Node.prototype.before = function (node) {
     return this;
 };
 
+/**
+ * Inserts the given node after the current node.
+ * @param node
+ * @returns {Node}
+ */
 Node.prototype.after = function (node) {
-    node.unlink();
+    node.remove();
     node.prev = this;
     node.next = this.next;
     node.parent = this.parent;
@@ -77,8 +132,13 @@ Node.prototype.after = function (node) {
     return this;
 };
 
+/**
+ * Replaces the current node by the given node.
+ * @param node
+ * @returns {Node}
+ */
 Node.prototype.replaceWith = function (node) {
-    node.unlink();
+    node.remove();
     node.prev = this.prev;
     node.next = this.next;
     node.parent = this.parent;
@@ -91,26 +151,27 @@ Node.prototype.replaceWith = function (node) {
     return this;
 };
 
+/**
+ * Empties the node.
+ * @returns {Node}
+ */
 Node.prototype.empty = function () {
     this.children = [];
     return this;
 };
 
+/**
+ * Get or set the node's textual content.
+ * @param text
+ * @returns {*}
+ */
 Node.prototype.text = function (text) {
-    if (text === undefined) {
-        // Reading
-        return this.children.map(function (child) {
-            return (typeof child === "string" ? child : child.text());
-        }).join("");
-    }
+    if (text === undefined) return this.children.map(c => (typeof c === 'string' ? c : c.text())).join('');
+    if (typeof text !== 'string') throw new Error(`Non-string value given to text() : ` + require("util").inspect(text));
 
-    if(!_.isString(text)) throw new Error(`Non-string value given to text() : ` + require("util").inspect(text));
-
-    // Writing
-    const that = this;
-    const $newNode = that.parser.parse(this.grammar, text);
+    const $newNode = this.parser.parse(this.grammar, text);
     this.children = $newNode.children;
-    this.children.map((n) => n.parent = that);
+    for (const c of this.children) c.parent = this;
     return this;
 };
 
