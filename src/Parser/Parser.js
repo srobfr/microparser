@@ -2,6 +2,7 @@ const Context = require('./Context');
 const ParseTableBuilder = require('../ParseTable/ParseTableBuilder');
 const {treeAdd, treeHas} = require('../utils/tree');
 const debug = require('debug')('microparser:parser');
+const util = require('util');
 
 /**
  * The Parser
@@ -175,13 +176,13 @@ function Parser(options) {
         const parseTable = parseTableBuilder.build(grammar);
         const originalGrammarsMap = parseTable.originalGrammarsMap;
 
-        debug({parseTable});
+        debug(util.inspect({actions: parseTable.actions}, {hidden: true, depth: 30, colors: true}));
 
         let expected = new Set();
         let expectedOffset = 0;
 
         function onFail(context) {
-            debug({failed: context.symbol});
+            debug({failed: context.symbol, offset: context.offset});
             if (expectedOffset < context.offset) {
                 expectedOffset = context.offset;
                 expected = new Set([context.symbol]);
