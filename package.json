@@ -2,7 +2,7 @@
   "name": "microparser",
   "version": "7.0.0",
   "description": "Generic text parsing library.",
-  "main": "microparser.js",
+  "main": "index.js",
   "scripts": {
     "test": "mocha tests/ --recursive"
   },
