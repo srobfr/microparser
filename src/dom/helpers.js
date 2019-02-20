@@ -15,7 +15,7 @@ helpers.multiple = function (grammar, separator) {
         {
             or: [
                 {multiple: [separator, grammar]},
-                /^/
+                ''
             ]
         }
     ];
@@ -45,8 +45,8 @@ helpers.optional = function (grammar) {
 };
 
 helpers.tag = function (tag, grammar) {
-    if (/boolean|number|string/.test(typeof grammar)) grammar = unscalarize(grammar).unscalarized;
-    grammar.tag = tag;
-    return grammar;
+    const r = [grammar];
+    r.tag = tag;
+    return r;
 };
 

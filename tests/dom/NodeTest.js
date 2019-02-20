@@ -87,11 +87,8 @@ describe('Node', function () {
             const id = tag('id', /^\w+/);
             const separator = /^ *, */;
             const ow = optional(/^ +/);
-            ow.decorate = $ => {
-                $.clean = () => $.text('');
-            };
-
             const listItem = or(id);
+
             const list = tag('list', ['(', ow, optmul(listItem, separator), ow, ')']);
             listItem.or.push(list);
 

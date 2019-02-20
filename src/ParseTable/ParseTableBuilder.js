@@ -2,7 +2,7 @@ const _ = require('lodash');
 const ParseTable = require('./ParseTable');
 const {treeAdd, treeHas} = require('../utils/tree');
 const unscalarize = require('../utils/unscalarize');
-const debug = require('debug')('ParseTableBuilder');
+const debug = require('debug')('microparser:ParseTableBuilder');
 const util = require('util');
 
 const inspect = obj => util.inspect(obj, {hidden: true, depth: 30, colors: true});
@@ -156,6 +156,8 @@ function ParseTableBuilder() {
         parseTable.actions = actions;
         parseTable.originalGrammarsMap = originalValuesMap;
         parseTable.firstsLastsBySymbol = firstsLastsBySymbol;
+
+        if (debug.enabled) debug('parseTable', inspect(parseTable));
 
         return parseTable;
     };

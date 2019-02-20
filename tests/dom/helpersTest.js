@@ -21,8 +21,23 @@ describe('helpers', function () {
         });
         it('Separator', function () {
             const $ = parser.parse(tag('multiple', multiple(tag('bar', 'bar'), tag('sep', ','))), 'bar,bar,bar,bar');
-            assert.equal(7, $.children.length);
+            assert.equal(7, $.children[0].children.length);
             assert.equal(`<multiple><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar></multiple>`, $.xml());
+        });
+    });
+
+    describe('optmul', function () {
+        it('Empty', function () {
+            const $ = parser.parse(tag('optmul', optmul(tag('bar', 'bar'))), '');
+            assert.equal(`<optmul/>`, $.xml());
+        });
+        it('Wrapped', function () {
+            const $ = parser.parse(['!', tag('optmul', optmul(tag('bar', 'bar'))), '!'], '!!');
+            assert.equal(`!<optmul/>!`, $.xml());
+        });
+        it('Wrapped2', function () {
+            const $ = parser.parse(['!', tag('optmul', optmul(tag('bar', 'bar'))), '!'], '!bar!');
+            assert.equal(`!<optmul><bar>bar</bar></optmul>!`, $.xml());
         });
     });
 
@@ -48,10 +63,11 @@ describe('helpers', function () {
     });
 
     it('Overlapping', function () {
-        // const w = /^[ \t\r\n]+/;
-        const ow = optional( ' ');
+        const w = /^[ \t\r\n]+/;
+        const ow = optional(w);
         const char = /^[a-z_]/i;
-        const list = multiple(char, ow);
-        parser.parse(list, 'ab');
+        const list = multiple(char, [ow, ',', ow]);
+        const $ = parser.parse(list, 'a , b,c,   d');
+        assert.equal(`a , b,c,   d`, $.text());
     });
 });

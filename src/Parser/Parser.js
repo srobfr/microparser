@@ -1,7 +1,7 @@
 const Context = require('./Context');
 const ParseTableBuilder = require('../ParseTable/ParseTableBuilder');
 const {treeAdd, treeHas} = require('../utils/tree');
-const debug = require('debug')('microparser:parser');
+const debug = require('debug')('microparser:Parser');
 const util = require('util');
 
 /**
@@ -172,10 +172,17 @@ function Parser(options) {
      * @param code
      */
     that.parse = function (grammar, code) {
-        const parseTable = parseTableBuilder.build(grammar);
-        const originalGrammarsMap = parseTable.originalGrammarsMap;
+        const stats = {
+            steps: 1,
+            shifts: 0,
+            reductions: 0,
+            maxContexts: 0,
+        };
 
-        if (debug.enabled) debug('parseTable', inspect(parseTable));
+        let now = Date.now();
+        const parseTable = parseTableBuilder.build(grammar);
+        stats.parseTableBuildTimeMs = Date.now() - now;
+        const originalGrammarsMap = parseTable.originalGrammarsMap;
 
         let expected = new Set();
         let expectedOffset = 0;
@@ -190,8 +197,9 @@ function Parser(options) {
             }
         }
 
-        let step = 0;
-        if (debug.enabled) debug(`=== Step ${step++} ===`);
+        now = Date.now();
+
+        if (debug.enabled) debug(`=== Step ${stats.steps} ===`);
         // Initialize first contexts
         let contexts = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
@@ -211,7 +219,9 @@ function Parser(options) {
         const finalContexts = new Set();
 
         while (contexts.size > 0) {
-            if (debug.enabled) debug(`=== Step ${step++} ===`);
+            stats.steps++;
+            stats.maxContexts = Math.max(stats.maxContexts, contexts.size);
+            if (debug.enabled) debug(`=== Step ${stats.steps} ===`);
 
             let newContexts = new Set();
             for (const context of contexts) {
@@ -235,12 +245,14 @@ function Parser(options) {
 
                         newContexts.add(newContext);
                         if (debug.enabled) debug('Shifted', inspect(newContext));
+                        stats.shifts++;
                     } else if (action.reduce) {
                         if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
                         const newContext = reduceContext(context, action.reduce, originalGrammarsMap);
                         if (!newContext) continue;
                         newContexts.add(newContext);
                         if (debug.enabled) debug('Reduced', inspect(newContext));
+                        stats.reductions++;
                     } else if (action.finish && context.previousContext === null) {
                         if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
                         if (context.matchedCode !== context.code) {
@@ -268,6 +280,11 @@ function Parser(options) {
             // debug({before: contexts.size, after: newContexts.size});
             contexts = newContexts;
         }
+
+        stats.parsingTimeMs = Date.now() - now;
+
+        const statsDebug = require('debug')('microparser:stats');
+        statsDebug(`Parser stats`, stats);
 
         if (finalContexts.size === 0) throwSyntaxError(code, expectedOffset, expected);
 
