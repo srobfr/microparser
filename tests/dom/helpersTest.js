@@ -47,13 +47,11 @@ describe('helpers', function () {
         });
     });
 
-    it.only('Overlapping', function () {
-        const w = /^[ \t\r\n]+/;
-        const ow = optional(w);
-        const ident = tag('ident', /^[a-z_][\w_]*/i);
-        const list = multiple(ident, [ow, ',']);
-
-        const $ = parser.parse(list, 'a,b');
-        assert.equal(`<optional>foo</optional>bar`, $.xml());
+    it('Overlapping', function () {
+        // const w = /^[ \t\r\n]+/;
+        const ow = optional( ' ');
+        const char = /^[a-z_]/i;
+        const list = multiple(char, ow);
+        parser.parse(list, 'ab');
     });
 });

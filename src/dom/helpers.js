@@ -15,7 +15,7 @@ helpers.multiple = function (grammar, separator) {
         {
             or: [
                 {multiple: [separator, grammar]},
-                ''
+                /^/
             ]
         }
     ];

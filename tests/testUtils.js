@@ -16,3 +16,5 @@ module.exports.inspectEqual = function (str, obj) {
     assert.equal(unifyInspectFormat(str), unifyInspectFormat(util.inspect(obj, {hidden: true, depth: 30})));
 };
 
+module.exports.inspect = obj => util.inspect(obj, {hidden: true, depth: 30, colors: true});
+

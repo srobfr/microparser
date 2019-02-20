@@ -140,23 +140,19 @@ describe('Parser', function () {
 
     describe('Multiple', function () {
         it('End infinite recursion', function () {
-            // In this case, the parser expects an infinite sequence of 'Foo's.
-            // This is useless as the parsing will eventually fail at some point, but technically the parser can handle it.
             assert.throws(() => {
                 const g = ['Foo'];
                 g.push(g);
                 parser.parse(g, 'FooFooFooFoo');
-            }, /\n            \^ expected 'Foo'/);
+            }, /Wrong grammar \(no terminal symbol\)/);
         });
 
         it('Start infinite recursion', function () {
-            // In this case, the parser (which parses from left to right) cannot cross the infinite recursion needed to go further.
-            // This is a bad grammar design AND useless anyway.
             assert.throws(() => {
                 const g = ['Foo'];
                 g.unshift(g);
                 parser.parse(g, 'FooFooFooFoo');
-            }, /\n\^ Grammar error./);
+            }, /Wrong grammar \(no first symbol\)/);
         });
 
         it('End Recursion', function () {

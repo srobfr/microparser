@@ -12,6 +12,8 @@ function Parser(options) {
     const that = this;
     const parseTableBuilder = new ParseTableBuilder();
 
+    const inspect = obj => util.inspect(obj, {hidden: true, depth: 30, colors: true});
+
     options = Object.assign({
         evaluate: (context, subContextsEvaluations) => subContextsEvaluations,
     }, options || {});
@@ -25,7 +27,7 @@ function Parser(options) {
     function throwSyntaxError(code, expectedOffset, expected) {
         expected = Array.from(expected).map(s => s && s.valueOf ? s.valueOf() : s);
 
-        debug({code, bestOffset: expectedOffset, expected});
+        if (debug.enabled) debug({code, bestOffset: expectedOffset, expected});
         let lines = code.split("\n");
         let o = 0;
         lines.forEach(function (line, i) {
@@ -70,8 +72,7 @@ function Parser(options) {
         else if (context.symbol instanceof RegExp) {
             const m = code.match(symbol);
             context.matchedCode = (m && m[0]);
-        }
-        else if (context.symbol instanceof Function) {
+        } else if (context.symbol instanceof Function) {
             context.matchedCode = context.symbol(context) || null;
         }
 
@@ -115,13 +116,13 @@ function Parser(options) {
                 const subContextsEvaluations = subContexts.map(context => context.evaluate());
                 return (reduction.evaluate || options.evaluate)(reducedContext, subContextsEvaluations);
             };
-        } else if(reduction.or) {
+        } else if (reduction.or) {
             // Or
             matchedCodes.push(c.matchedCode);
             evaluate = () => {
                 return (reduction.evaluate || options.evaluate)(reducedContext, [context.evaluate()]);
             };
-        } else if(reduction.multiple) {
+        } else if (reduction.multiple) {
             // Multiple
             const subContexts = [];
             do {
@@ -129,7 +130,7 @@ function Parser(options) {
                 matchedCodes.unshift(c.matchedCode);
                 firstContext = c;
                 c = c.previousContext;
-            } while(c && c.symbol === reduction.multiple);
+            } while (c && c.symbol === reduction.multiple);
 
             evaluate = () => {
                 const subContextsEvaluations = subContexts.map(context => context.evaluate());
@@ -159,10 +160,8 @@ function Parser(options) {
         const dedupTree = new Map();
         for (const context of contexts) {
             if (treeHas(dedupTree, context.offset, context.symbol, context.matchedCode)) {
-                debug({deduped: context});
                 contexts.delete(context);
-            }
-            else treeAdd(dedupTree, context.offset, context.symbol, context.matchedCode);
+            } else treeAdd(dedupTree, context.offset, context.symbol, context.matchedCode);
         }
     }
 
@@ -176,13 +175,13 @@ function Parser(options) {
         const parseTable = parseTableBuilder.build(grammar);
         const originalGrammarsMap = parseTable.originalGrammarsMap;
 
-        debug(util.inspect({actions: parseTable.actions}, {hidden: true, depth: 30, colors: true}));
+        if (debug.enabled) debug('parseTable', inspect(parseTable));
 
         let expected = new Set();
         let expectedOffset = 0;
 
         function onFail(context) {
-            debug({failed: context.symbol, offset: context.offset});
+            if (debug.enabled) debug({failed: context.symbol, offset: context.offset});
             if (expectedOffset < context.offset) {
                 expectedOffset = context.offset;
                 expected = new Set([context.symbol]);
@@ -191,6 +190,8 @@ function Parser(options) {
             }
         }
 
+        let step = 0;
+        if (debug.enabled) debug(`=== Step ${step++} ===`);
         // Initialize first contexts
         let contexts = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
@@ -200,7 +201,9 @@ function Parser(options) {
             return context;
         }).filter(context => {
             let r = matchContext(context);
-            if (r) debug({shifted: context});
+            if (r) {
+                if (debug.enabled) debug('Initial shift', inspect(context));
+            }
             else onFail(context);
             return r;
         }));
@@ -208,7 +211,8 @@ function Parser(options) {
         const finalContexts = new Set();
 
         while (contexts.size > 0) {
-            // debug({contexts: contexts.size});
+            if (debug.enabled) debug(`=== Step ${step++} ===`);
+
             let newContexts = new Set();
             for (const context of contexts) {
                 // Get possible actions
@@ -223,19 +227,22 @@ function Parser(options) {
                         newContext.previousContext = context;
                         newContext.symbol = action.shift;
                         newContext.originalGrammar = originalGrammarsMap.get(newContext.symbol);
+                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${newContext.code.substr(newContext.offset, 10)}".`);
                         if (!matchContext(newContext)) {
                             onFail(newContext);
                             continue;
                         }
 
                         newContexts.add(newContext);
-                        debug({shifted: newContext});
+                        if (debug.enabled) debug('Shifted', inspect(newContext));
                     } else if (action.reduce) {
+                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
                         const newContext = reduceContext(context, action.reduce, originalGrammarsMap);
                         if (!newContext) continue;
                         newContexts.add(newContext);
-                        debug({reduced: newContext});
+                        if (debug.enabled) debug('Reduced', inspect(newContext));
                     } else if (action.finish && context.previousContext === null) {
+                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
                         if (context.matchedCode !== context.code) {
                             // Too much code to match this grammar.
                             const eofContext = new Context();
@@ -248,7 +255,7 @@ function Parser(options) {
                         }
 
                         finalContexts.add(context);
-                        debug({finished: context});
+                        if (debug.enabled) debug('Finished', inspect(context));
                     }
                 }
             }
@@ -256,7 +263,9 @@ function Parser(options) {
             // Optimization : Shave the contexts tree by removing useless duplicates
             dedupContextsSet(newContexts);
 
-            debug({before: contexts.size, after: newContexts.size});
+            if (debug.enabled) debug('newContexts', inspect(newContexts));
+
+            // debug({before: contexts.size, after: newContexts.size});
             contexts = newContexts;
         }
 
