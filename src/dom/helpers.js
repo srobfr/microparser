@@ -11,13 +11,13 @@ helpers.multiple = function (grammar, separator) {
     if (separator === undefined) return {multiple: grammar};
     // There is a separator
     const g = [
-        grammar,
-        {
+        helpers.tag('multiple-first-item', grammar),
+        helpers.tag('multiple-items', {
             or: [
-                {multiple: [separator, grammar]},
-                ''
+                {multiple: helpers.tag('multiple-item', [separator, grammar])},
+                helpers.tag('multiple-end', '')
             ]
-        }
+        })
     ];
     g.evaluate = function (context, children) {
         const node = new Node(g, context.parser);
@@ -41,12 +41,10 @@ helpers.optmul = function (grammar, separator) {
 };
 
 helpers.optional = function (grammar) {
-    return {or: [grammar, '']};
+    return {or: [helpers.tag('optional-item', grammar), helpers.tag('optional-empty', '')]};
 };
 
 helpers.tag = function (tag, grammar) {
-    const r = [grammar];
-    r.tag = tag;
-    return r;
+    grammar.tag = tag;
+    return grammar;
 };
-

@@ -46,6 +46,11 @@ function Node(grammar, parser) {
      * @type {Array<Node|string>}
      */
     that.children = [];
+
+    // Grammar-defined methods
+    for (const m in grammar.methods || {}) {
+        that[m] = grammar.methods[m].bind(that);
+    }
 }
 
 /**

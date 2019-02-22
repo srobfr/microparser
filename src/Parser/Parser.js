@@ -3,6 +3,7 @@ const ParseTableBuilder = require('../ParseTable/ParseTableBuilder');
 const {treeAdd, treeHas} = require('../utils/tree');
 const debug = require('debug')('microparser:Parser');
 const util = require('util');
+const chalk = require('chalk');
 
 /**
  * The Parser
@@ -27,7 +28,7 @@ function Parser(options) {
     function throwSyntaxError(code, expectedOffset, expected) {
         expected = Array.from(expected).map(s => s && s.valueOf ? s.valueOf() : s);
 
-        if (debug.enabled) debug({code, bestOffset: expectedOffset, expected});
+        // if (debug.enabled) debug({code, bestOffset: expectedOffset, expected});
         let lines = code.split("\n");
         let o = 0;
         lines.forEach(function (line, i) {
@@ -80,11 +81,27 @@ function Parser(options) {
             context.evaluate = () => {
                 return (context.symbol.evaluate || options.evaluate)(context, [context.matchedCode]);
             };
+
+            if (debug.enabled) debug(`${showCode(context.code, context.offset, context.matchedCode.length)} ${chalk.green.inverse('matches')} ${inspect(context.symbol)}`);
             return true;
         }
 
+        if (debug.enabled) debug(`${showCode(context.code, context.offset, 1)} ${chalk.red.inverse('does not match')} ${inspect(context.symbol)}`);
+
         return false;
     }
+
+    const showCode = (code, offset, length) => {
+        const prefixLength = Math.min(6, offset);
+        const prefixOffset = offset - prefixLength;
+
+        return [
+            code.substr(prefixOffset, prefixLength),
+            (length === 0 ? chalk.bgBlack('‸') : ''),
+            chalk.bgBlack(code.substr(offset, length)),
+            code.substr(offset + length, 6)
+        ].join('');
+    };
 
     /**
      * @param context
@@ -92,7 +109,7 @@ function Parser(options) {
      * @param originalGrammarsMap
      * @returns {Context|null}
      */
-    function reduceContext(context, reduction, originalGrammarsMap) {
+    function reduceContext(context, reduction, originalGrammarsMap, getTag) {
         let c = context;
         const matchedCodes = [];
         let firstContext = context;
@@ -104,7 +121,8 @@ function Parser(options) {
             for (let i = reduction.length - 1; i >= 0; i--) {
                 if (!c || c.symbol !== reduction[i]) {
                     // debug({subReductionFailed: reduction[i], c});
-                    return null;
+                    firstContext = null;
+                    break;
                 }
                 subContexts.unshift(c);
                 matchedCodes.unshift(c.matchedCode);
@@ -138,7 +156,10 @@ function Parser(options) {
             };
         }
 
-        if (firstContext === null) return null;
+        if (firstContext === null) {
+            if (debug.enabled) debug(`${showCode(context.code, context.offset, matchedCodes.join('').length)} ${chalk.red.inverse('is not a')} ${chalk.blue.inverse(getTag(reduction))}`);
+            return null;
+        }
 
         reducedContext.code = context.code;
         reducedContext.symbol = reduction;
@@ -147,6 +168,8 @@ function Parser(options) {
         reducedContext.offset = firstContext.offset;
         reducedContext.previousContext = firstContext.previousContext;
         reducedContext.evaluate = evaluate;
+
+        if (debug.enabled) debug(`${showCode(reducedContext.code, reducedContext.offset, reducedContext.matchedCode.length)} ${chalk.green.inverse('is a')} ${chalk.blue.inverse(getTag(reducedContext.symbol))}`);
 
         return reducedContext;
     }
@@ -184,11 +207,21 @@ function Parser(options) {
         stats.parseTableBuildTimeMs = Date.now() - now;
         const originalGrammarsMap = parseTable.originalGrammarsMap;
 
+        const generatedTags = new Map();
+        const getTag = symbol => {
+            if (!generatedTags.has(symbol)) {
+                const tag = `${symbol.tag || 'sym'}${generatedTags.size}`;
+                // debug(`Registering untagged symbol ${inspect(symbol)} as ${chalk.blue.inverse(tag)}`);
+                generatedTags.set(symbol, tag);
+            }
+            return generatedTags.get(symbol);
+        };
+
         let expected = new Set();
         let expectedOffset = 0;
 
         function onFail(context) {
-            if (debug.enabled) debug({failed: context.symbol, offset: context.offset});
+            // if (debug.enabled) debug({failed: context.symbol, offset: context.offset});
             if (expectedOffset < context.offset) {
                 expectedOffset = context.offset;
                 expected = new Set([context.symbol]);
@@ -199,7 +232,7 @@ function Parser(options) {
 
         now = Date.now();
 
-        if (debug.enabled) debug(`=== Step ${stats.steps} ===`);
+        if (debug.enabled) debug(`=== Step ${stats.steps}===`);
         // Initialize first contexts
         let contexts = new Set(parseTable.firstSymbols.map(symbol => {
             const context = new Context();
@@ -210,9 +243,8 @@ function Parser(options) {
         }).filter(context => {
             let r = matchContext(context);
             if (r) {
-                if (debug.enabled) debug('Initial shift', inspect(context));
-            }
-            else onFail(context);
+                // if (debug.enabled) debug('Initial shift', inspect(context));
+            } else onFail(context);
             return r;
         }));
 
@@ -221,7 +253,7 @@ function Parser(options) {
         while (contexts.size > 0) {
             stats.steps++;
             stats.maxContexts = Math.max(stats.maxContexts, contexts.size);
-            if (debug.enabled) debug(`=== Step ${stats.steps} ===`);
+            if (debug.enabled) debug(`=== Step ${stats.steps} (${contexts.size} contexts) ===`);
 
             let newContexts = new Set();
             for (const context of contexts) {
@@ -237,24 +269,24 @@ function Parser(options) {
                         newContext.previousContext = context;
                         newContext.symbol = action.shift;
                         newContext.originalGrammar = originalGrammarsMap.get(newContext.symbol);
-                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${newContext.code.substr(newContext.offset, 10)}".`);
+                        // if (debug.enabled) debug(`- Trying ${inspect(action)} on "${newContext.code.substr(newContext.offset, 10)}".`);
                         if (!matchContext(newContext)) {
                             onFail(newContext);
                             continue;
                         }
 
                         newContexts.add(newContext);
-                        if (debug.enabled) debug('Shifted', inspect(newContext));
+                        // if (debug.enabled) debug('Shifted', inspect(newContext));
                         stats.shifts++;
                     } else if (action.reduce) {
-                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
-                        const newContext = reduceContext(context, action.reduce, originalGrammarsMap);
+                        // if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
+                        const newContext = reduceContext(context, action.reduce, originalGrammarsMap, getTag);
                         if (!newContext) continue;
                         newContexts.add(newContext);
-                        if (debug.enabled) debug('Reduced', inspect(newContext));
+                        // if (debug.enabled) debug('Reduced', inspect(newContext));
                         stats.reductions++;
                     } else if (action.finish && context.previousContext === null) {
-                        if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
+                        // if (debug.enabled) debug(`- Trying ${inspect(action)} on "${context.code.substr(context.offset, 10)}".`);
                         if (context.matchedCode !== context.code) {
                             // Too much code to match this grammar.
                             const eofContext = new Context();
@@ -267,7 +299,7 @@ function Parser(options) {
                         }
 
                         finalContexts.add(context);
-                        if (debug.enabled) debug('Finished', inspect(context));
+                        // if (debug.enabled) debug('Finished', inspect(context));
                     }
                 }
             }
@@ -275,7 +307,7 @@ function Parser(options) {
             // Optimization : Shave the contexts tree by removing useless duplicates
             dedupContextsSet(newContexts);
 
-            if (debug.enabled) debug('newContexts', inspect(newContexts));
+            // if (debug.enabled) debug('newContexts', inspect(newContexts));
 
             // debug({before: contexts.size, after: newContexts.size});
             contexts = newContexts;

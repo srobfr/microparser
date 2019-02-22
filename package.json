@@ -9,6 +9,7 @@
   "author": "Simon Robert",
   "license": "MIT",
   "dependencies": {
+    "chalk": "^2.4.2",
     "debug": "^3.1.0",
     "lodash": "^4.17.11"
   },

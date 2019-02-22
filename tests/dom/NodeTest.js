@@ -83,20 +83,29 @@ describe('Node', function () {
             $d.before($g);
             assert.equal(`abcgdef`, $.text());
         });
-        it('misc', function () {
+        it.only('misc', function () {
             const id = tag('id', /^\w+/);
-            const separator = /^ *, */;
-            const ow = optional(/^ +/);
-            const listItem = or(id);
+            const separator = tag('separator', /^ *, */);
+            const ow = tag('ow', optional(/^ +/));
+            ow.methods = {
+                clean: function () {
+                    this.text(' ');
+                },
+            };
+
+            const listItem = tag('listItem', or(id));
 
             const list = tag('list', ['(', ow, optmul(listItem, separator), ow, ')']);
             listItem.or.push(list);
 
-            const $ = parser.parse(list, '(foo, bar   ,bplop, (             p, ((((())),p))))');
+            // const $ = parser.parse(list, '(foo, bar   ,bplop, (             p, ((((())),p))))');
+            const $ = parser.parse(list, '(foo, (             plop, ((((())),oop))))');
+            debug($.xml());
+
             $.findByGrammar(separator).text(', ');
             $.findByGrammar(ow).clean();
             for(const $id of $.findByGrammar(id)) $id.text($id.text().replace(/o/g, '0'));
-            assert.equal(`(f00, bar, bpl0p, (p, ((((())), p))))`, $.text());
+            assert.equal(`( f00, ( pl0p, ( ( ( ( (  ) ) ), 00p ) ) ) )`, $.text());
         });
     });
 });

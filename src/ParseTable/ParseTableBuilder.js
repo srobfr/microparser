@@ -157,7 +157,15 @@ function ParseTableBuilder() {
         parseTable.originalGrammarsMap = originalValuesMap;
         parseTable.firstsLastsBySymbol = firstsLastsBySymbol;
 
-        if (debug.enabled) debug('parseTable', inspect(parseTable));
+        // if (debug.enabled) debug('parseTable', inspect(parseTable));
+        if (debug.enabled) {
+            let actionsCount = 0;
+            for (const v of parseTable.actions.values()) actionsCount += v.size;
+            debug('ParseTable stats', {
+                symbols: parseTable.actions.size,
+                actions: actionsCount
+            });
+        }
 
         return parseTable;
     };
