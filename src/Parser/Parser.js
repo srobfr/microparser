@@ -107,6 +107,7 @@ function Parser(options) {
      * @param context
      * @param reduction
      * @param originalGrammarsMap
+     * @param getTag {function}
      * @returns {Context|null}
      */
     function reduceContext(context, reduction, originalGrammarsMap, getTag) {

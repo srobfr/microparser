@@ -21,7 +21,7 @@ describe('helpers', function () {
         });
         it('Separator', function () {
             const $ = parser.parse(tag('multiple', multiple(tag('bar', 'bar'), tag('sep', ','))), 'bar,bar,bar,bar');
-            assert.equal(7, $.children[0].children.length);
+            assert.equal(7, $.children.length);
             assert.equal(`<multiple><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar><sep>,</sep><bar>bar</bar></multiple>`, $.xml());
         });
     });

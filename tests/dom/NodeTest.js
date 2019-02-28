@@ -83,7 +83,7 @@ describe('Node', function () {
             $d.before($g);
             assert.equal(`abcgdef`, $.text());
         });
-        it.only('misc', function () {
+        it('misc', function () {
             const id = tag('id', /^\w+/);
             const separator = tag('separator', /^ *, */);
             const ow = tag('ow', optional(/^ +/));
