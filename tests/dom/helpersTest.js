@@ -71,10 +71,11 @@ describe('helpers', function () {
         assert.equal(`a , b,c,   d`, $.text());
     });
 
-    it.only('Compound separator bug', function () {
-        const owc = optmul(or(' ', '.'));
+    it('Compound separator bug', function () {
+        const owc = optmul(or(' ', [/^\/\*[^]+?\*\//]));
         const separator = [owc, ',', owc];
-        const mult = multiple('a', separator)
-        parser.parse(mult, 'a  ., a.');
+        const mult = multiple('a', separator);
+        const g = ['(', owc, mult, owc, ')'];
+        parser.parse(g, '( a  /** Test\n*/, a /* foo */ )');
     });
 });

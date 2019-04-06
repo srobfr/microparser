@@ -97,8 +97,8 @@ function Parser(options) {
 
         return [
             code.substr(prefixOffset, prefixLength),
-            (length === 0 ? chalk.bgBlack('‸') : ''),
-            chalk.bgBlack(code.substr(offset, length)),
+            (length === 0 ? '‸' : ''),
+            chalk.underline(code.substr(offset, length)),
             code.substr(offset + length, 6)
         ].join('');
     };
@@ -205,6 +205,7 @@ function Parser(options) {
 
         let now = Date.now();
         const parseTable = parseTableBuilder.build(grammar);
+        // console.log(require('util').inspect(parseTable.actions, {colors: true, depth: 10}));
         stats.parseTableBuildTimeMs = Date.now() - now;
         const originalGrammarsMap = parseTable.originalGrammarsMap;
 
