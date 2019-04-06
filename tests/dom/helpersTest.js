@@ -70,4 +70,11 @@ describe('helpers', function () {
         const $ = parser.parse(list, 'a , b,c,   d');
         assert.equal(`a , b,c,   d`, $.text());
     });
+
+    it.only('Compound separator bug', function () {
+        const owc = optmul(or(' ', '.'));
+        const separator = [owc, ',', owc];
+        const mult = multiple('a', separator)
+        parser.parse(mult, 'a  ., a.');
+    });
 });
