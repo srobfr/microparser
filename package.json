@@ -1,6 +1,6 @@
 {
   "name": "microparser",
-  "version": "7.0.2",
+  "version": "8.0.0",
   "description": "Generic text parsing library.",
   "main": "index.js",
   "scripts": {
